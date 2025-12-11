@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build results
+[Bb]in/
+[Oo]bj/
+dist/
+build/
+app-recording.webm
+app-recording.gif
+
+# IDEs
+.vscode/
+.idea/
+*.sln.docstates
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# User specific
+*.user
