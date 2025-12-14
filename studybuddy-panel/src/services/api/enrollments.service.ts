@@ -17,7 +17,7 @@ export const enrollmentsService = {
 
   async getMyCourses(): Promise<EnrollmentResponse[]> {
     const response = await apiClient.get<EnrollmentResponse[]>(
-      "/student/enrollments"
+      "/enrollments/my-courses"
     );
     return response.data;
   },
