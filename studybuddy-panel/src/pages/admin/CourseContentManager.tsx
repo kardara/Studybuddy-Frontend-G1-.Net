@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Plus,
     Edit,
@@ -58,7 +58,7 @@ interface Quiz {
 interface ModalState {
     show: boolean;
     type: "module" | "lesson" | "quiz" | null;
-    data?: any;
+    data?: Module | Lesson | Quiz;
     courseId?: number;
     moduleId?: number;
 }
@@ -97,18 +97,7 @@ export default function CourseContentManager() {
     });
 
     // Load courses
-    useEffect(() => {
-        fetchCourses();
-    }, []);
-
-    // Load modules when course changes
-    useEffect(() => {
-        if (selectedCourse) {
-            fetchModules(selectedCourse.courseId);
-        }
-    }, [selectedCourse]);
-
-    const fetchCourses = async () => {
+    const fetchCourses = useCallback(async () => {
         try {
             setLoading(true);
             const response = await fetch("/api/v1/courses/admin/all", {
@@ -133,7 +122,11 @@ export default function CourseContentManager() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [toast]);
+
+    useEffect(() => {
+        fetchCourses();
+    }, [fetchCourses]);
 
     const fetchModules = async (courseId: number) => {
         try {
@@ -153,6 +146,13 @@ export default function CourseContentManager() {
             setLoading(false);
         }
     };
+
+    // Load modules when course changes
+    useEffect(() => {
+        if (selectedCourse) {
+            fetchModules(selectedCourse.courseId);
+        }
+    }, [selectedCourse]);
 
     // Module handlers
     const handleAddModule = () => {
@@ -310,7 +310,7 @@ export default function CourseContentManager() {
         setSubmitting(true);
         try {
             const url = modal.data
-                ? `/api/v1/courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons/${modal.data.lessonId}`
+                ? `/api/v1/courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons/${(modal.data as Lesson).lessonId}`
                 : `/api/v1/courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons`;
 
             const method = modal.data ? "PUT" : "POST";

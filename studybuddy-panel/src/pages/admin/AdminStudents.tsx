@@ -155,7 +155,7 @@ export default function AdminStudents() {
   };
 
   const applyFilters = () => {
-    let filtered = students.filter((student) => {
+    const filtered = students.filter((student) => {
       const matchesSearch =
         searchTerm === "" ||
         student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -388,7 +388,7 @@ export default function AdminStudents() {
 
         <select
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as any)}
+          onChange={(e) => setFilterStatus(e.target.value as "all" | "active" | "blocked")}
           className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="all">All Students</option>

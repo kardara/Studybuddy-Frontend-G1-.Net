@@ -202,23 +202,32 @@ export const adminService = {
       const backendData = response.data;
 
       // FIXED: Check for both capital 'Users' and lowercase 'users' properties
-      if (backendData && (backendData.Users || (backendData as any).users)) {
+      if (
+        backendData &&
+        (backendData.Users ||
+          ("users" in backendData &&
+            (backendData as { users: typeof backendData.Users }).users))
+      ) {
         // Backend returns UserListResponseDto with Users array
-        const usersArray = backendData.Users || (backendData as any).users;
+        const usersArray =
+          backendData.Users ||
+          ("users" in backendData
+            ? (backendData as { users: BackendUserDto[] }).users
+            : []);
         console.log("AdminService: Processing Users array:", usersArray);
-        const users = usersArray.map((user: any) => ({
-          userId: user.UserId || user.Id || user.userId,
-          email: user.Email || user.email,
-          firstName: user.FirstName || user.firstName,
-          lastName: user.LastName || user.lastName,
-          role: user.Role || user.role,
-          isBlocked: user.IsBlocked || user.isBlocked,
+        const users = usersArray.map((user: BackendUserDto) => ({
+          userId: user.UserId,
+          email: user.Email,
+          firstName: user.FirstName,
+          lastName: user.LastName,
+          role: user.Role,
+          isBlocked: user.IsBlocked,
           isActive: user.IsActive !== undefined ? user.IsActive : true,
-          phoneNumber: user.PhoneNumber || user.phoneNumber,
-          createdAt: user.CreatedAt || user.createdAt,
-          updatedAt: user.UpdatedAt || user.updatedAt,
-          lastLoginAt: user.LastLoginAt || user.lastLoginAt,
-          blockReason: user.BlockReason || user.blockReason,
+          phoneNumber: user.PhoneNumber,
+          createdAt: user.CreatedAt,
+          updatedAt: user.UpdatedAt,
+          lastLoginAt: user.LastLoginAt,
+          blockReason: user.BlockReason,
         }));
         console.log("AdminService: Mapped users:", users);
         return users;
@@ -227,19 +236,19 @@ export const adminService = {
       // Fallback for direct array response (legacy support)
       if (Array.isArray(backendData)) {
         console.log("AdminService: Processing direct array:", backendData);
-        const users = backendData.map((user: any) => ({
-          userId: user.UserId || user.Id || user.userId,
-          email: user.Email || user.email,
-          firstName: user.FirstName || user.firstName,
-          lastName: user.LastName || user.lastName,
-          role: user.Role || user.role,
-          isBlocked: user.IsBlocked || user.isBlocked,
+        const users = backendData.map((user: BackendUserDto) => ({
+          userId: user.UserId,
+          email: user.Email,
+          firstName: user.FirstName,
+          lastName: user.LastName,
+          role: user.Role,
+          isBlocked: user.IsBlocked,
           isActive: user.IsActive !== undefined ? user.IsActive : true,
-          phoneNumber: user.PhoneNumber || user.phoneNumber,
-          createdAt: user.CreatedAt || user.createdAt,
-          updatedAt: user.UpdatedAt || user.updatedAt,
-          lastLoginAt: user.LastLoginAt || user.lastLoginAt,
-          blockReason: user.BlockReason || user.blockReason,
+          phoneNumber: user.PhoneNumber,
+          createdAt: user.CreatedAt,
+          updatedAt: user.UpdatedAt,
+          lastLoginAt: user.LastLoginAt,
+          blockReason: user.BlockReason,
         }));
         console.log("AdminService: Mapped users from array:", users);
         return users;

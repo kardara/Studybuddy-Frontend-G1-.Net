@@ -55,7 +55,6 @@ export default function ResetPassword() {
 
         try {
             await authService.resetPassword({
-                email: email || '',
                 token: token || '',
                 newPassword: password,
             });

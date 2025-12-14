@@ -31,7 +31,8 @@ export interface User {
 }
 
 export interface ResetPasswordRequest {
-  email: string;
+  token: string;
+  newPassword: string;
 }
 
 export interface ChangePasswordRequest {

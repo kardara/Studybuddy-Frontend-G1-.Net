@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Search,
@@ -62,11 +62,7 @@ export default function AdminCourses() {
     generatedContent: "",
   });
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       setLoading(true);
       const data = await coursesService.getAllCourses();
@@ -81,7 +77,11 @@ export default function AdminCourses() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
 
   const resetForm = () => {
     setFormData({
@@ -109,13 +109,13 @@ export default function AdminCourses() {
       title: course.title,
       description: course.description || "",
       category: course.category || "",
-      level: (course as any).level || "Beginner",
-      estimatedDurationHours: (course as any).estimatedDurationHours?.toString() || "",
-      prerequisites: (course as any).prerequisites || "",
-      learningObjectives: (course as any).learningObjectives || "",
-      thumbnailUrl: (course as any).thumbnailUrl || "",
-      sourcePdfUrl: (course as any).sourcePdfUrl || "",
-      generatedContent: (course as any).generatedContent || "",
+      level: (course as CourseListDto & Record<string, unknown>).level as string || "Beginner",
+      estimatedDurationHours: ((course as CourseListDto & Record<string, unknown>).estimatedDurationHours as number | undefined)?.toString() || "",
+      prerequisites: (course as CourseListDto & Record<string, unknown>).prerequisites as string || "",
+      learningObjectives: (course as CourseListDto & Record<string, unknown>).learningObjectives as string || "",
+      thumbnailUrl: (course as CourseListDto & Record<string, unknown>).thumbnailUrl as string || "",
+      sourcePdfUrl: (course as CourseListDto & Record<string, unknown>).sourcePdfUrl as string || "",
+      generatedContent: (course as CourseListDto & Record<string, unknown>).generatedContent as string || "",
     });
     setEditingCourse(course);
     setShowModal(true);
@@ -126,41 +126,37 @@ export default function AdminCourses() {
     setSubmitting(true);
 
     try {
-      const courseData: CreateCourseRequest | UpdateCourseRequest = {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        level: formData.level,
-        estimatedDurationHours: formData.estimatedDurationHours
-          ? parseInt(formData.estimatedDurationHours)
-          : undefined,
-        prerequisites: formData.prerequisites,
-        learningObjectives: formData.learningObjectives,
-        thumbnailUrl: formData.thumbnailUrl,
-      };
-
       if (editingCourse) {
         // Update existing course
-        await coursesService.updateCourse({
+        const courseData: UpdateCourseRequest = {
           courseId: editingCourse.courseId,
           title: formData.title,
           description: formData.description,
           category: formData.category,
-        });
+          level: formData.level,
+          estimatedDurationHours: formData.estimatedDurationHours
+            ? parseInt(formData.estimatedDurationHours)
+            : undefined,
+          prerequisites: formData.prerequisites,
+          learningObjectives: formData.learningObjectives,
+          thumbnailUrl: formData.thumbnailUrl,
+        };
+        await coursesService.updateCourse(courseData);
         toast({
           title: "Success",
           description: "Course updated successfully",
         });
       } else {
         // Create new course
-        await coursesService.createCourse({
+        const courseData: CreateCourseRequest = {
           title: formData.title,
           description: formData.description,
           category: formData.category,
           sourcePdfUrl: formData.sourcePdfUrl || undefined,
           generatedContent: formData.generatedContent || undefined,
           createdBy: user?.userId || 1, // Use current user ID or fallback to 1
-        });
+        };
+        await coursesService.createCourse(courseData);
         toast({
           title: "Success",
           description: "Course created successfully",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
   Search,
@@ -92,11 +92,7 @@ export default function AdminQuizzes() {
     ],
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [quizzesData, coursesData] = await Promise.all([
@@ -110,13 +106,18 @@ export default function AdminQuizzes() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load data",
+        description: "Failed to load quizzes"
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Event handlers
   const resetForm = () => {
     setFormData({
       title: "",
