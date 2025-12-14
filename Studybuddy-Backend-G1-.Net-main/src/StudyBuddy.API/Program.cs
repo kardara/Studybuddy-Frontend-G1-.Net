@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -92,17 +93,21 @@ builder.Services.AddSwaggerGen(c =>
 
 // Database Configuration
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .ConfigureWarnings(w => w.Ignore(RelationalEventId.MultipleCollectionIncludeWarning)));
 
 // Configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("Email"));
+builder.Services.Configure<CertificateSettings>(builder.Configuration.GetSection("CertificateSettings"));
 
 // Register configuration objects directly for services that need them
 builder.Services.AddSingleton(provider =>
     provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<EmailSettings>>().Value);
 builder.Services.AddSingleton(provider =>
     provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<JwtSettings>>().Value);
+builder.Services.AddSingleton(provider =>
+    provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<CertificateSettings>>().Value);
 
 // Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -154,8 +159,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Value
-            .Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var allowedOriginsValue = builder.Configuration.GetSection("Cors:AllowedOrigins").Value;
+        var allowedOrigins = allowedOriginsValue?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? new string[] { "http://localhost:3000" };
 
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
@@ -181,7 +186,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowFrontend");
 

@@ -1,15 +1,23 @@
 using StudyBuddy.Core.Interfaces;
+using StudyBuddy.Core.Configuration;
 using System.Text;
 
 namespace StudyBuddy.Services.Implementations
 {
     public class PdfGenerator : IPdfGenerator
     {
+        private readonly CertificateSettings _certificateSettings;
+
+        public PdfGenerator(CertificateSettings certificateSettings)
+        {
+            _certificateSettings = certificateSettings;
+        }
+
         public async Task<byte[]> GenerateCertificatePdfAsync(string studentName, string courseName, string certificateNumber, DateTime issuedAt)
         {
             // Generate HTML content for the certificate
             var html = GenerateCertificateHtml(studentName, courseName, certificateNumber, issuedAt);
-            
+
             // For now, return the HTML as bytes - in production, you'd use a proper HTML to PDF library
             // like iText7, PuppeteerSharp, or QuestPDF
             return Encoding.UTF8.GetBytes(html);
@@ -17,6 +25,10 @@ namespace StudyBuddy.Services.Implementations
 
         private string GenerateCertificateHtml(string studentName, string courseName, string certificateNumber, DateTime issuedAt)
         {
+            var logoHtml = string.IsNullOrEmpty(_certificateSettings.LogoUrl)
+                ? ""
+                : $"<img src='{_certificateSettings.LogoUrl}' alt='StudyBuddy Logo' class='logo' />";
+
             return $@"
 <!DOCTYPE html>
 <html>
@@ -25,7 +37,7 @@ namespace StudyBuddy.Services.Implementations
     <title>Certificate of Completion</title>
     <style>
         body {{
-            font-family: 'Georgia', serif;
+            font-family: '{_certificateSettings.FontFamily}';
             text-align: center;
             padding: 50px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -93,6 +105,7 @@ namespace StudyBuddy.Services.Implementations
 </head>
 <body>
     <div class='certificate'>
+        {logoHtml}
         <div class='title'>Certificate of Completion</div>
         <div class='decorative-line'></div>
         <div class='subtitle'>This certifies that</div>

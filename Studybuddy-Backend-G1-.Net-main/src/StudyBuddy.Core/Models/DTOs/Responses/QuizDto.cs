@@ -32,4 +32,20 @@ namespace StudyBuddy.Core.Models.DTOs.Responses
         public string OptionText { get; set; } = string.Empty;
         public bool IsCorrect { get; set; }
     }
+
+    public class QuizListDto
+    {
+        public int QuizId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string CourseTitle { get; set; } = string.Empty;
+        public int CourseId { get; set; }
+        public int QuestionCount { get; set; }
+        public int PassingScore { get; set; }
+        public int? TimeLimit { get; set; }
+        public int? MaxAttempts { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+    }
 }

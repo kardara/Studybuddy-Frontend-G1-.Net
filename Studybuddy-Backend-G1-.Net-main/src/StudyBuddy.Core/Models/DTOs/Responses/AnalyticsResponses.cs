@@ -2,9 +2,14 @@ namespace StudyBuddy.Core.Models.DTOs.Responses
 {
     public class DashboardAnalyticsDto
     {
-        public int TotalCourses { get; set; }
+        public int TotalUsers { get; set; }
         public int TotalStudents { get; set; }
+        public int TotalAdmins { get; set; }
+        public int TotalCourses { get; set; }
+        public int PublishedCourses { get; set; }
         public int TotalEnrollments { get; set; }
+        public int TotalQuizzes { get; set; }
+        public int TotalCertificates { get; set; }
         public int ActiveStudentsToday { get; set; }
         public int TotalQuizzesSubmitted { get; set; }
         public decimal AverageCompletionRate { get; set; }

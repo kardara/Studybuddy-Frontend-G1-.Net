@@ -78,7 +78,8 @@ namespace StudyBuddy.Services.Implementations
                     {
                         LessonId = l.LessonId,
                         Title = l.Title,
-                        Content = null, // Only show content if preview
+                        Content = l.Content, // Include content for student viewing
+                        VideoUrl = l.VideoUrl,
                         LessonNumber = l.LessonNumber,
                         LessonType = l.ContentType ?? "Text",
                         EstimatedDurationMinutes = l.EstimatedDurationMinutes,

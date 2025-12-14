@@ -32,7 +32,7 @@ namespace StudyBuddy.Data.StoredProcedures
             var result = await command.ExecuteScalarAsync();
             await _context.Database.CloseConnectionAsync();
 
-            return result == DBNull.Value ? default! : (T)result;
+            return result == null || result == DBNull.Value ? default! : (T)result!;
         }
 
         public async Task<int> ExecuteNonQueryAsync(string storedProcedureName, params (string parameterName, object value)[] parameters)
@@ -162,9 +162,9 @@ namespace StudyBuddy.Data.StoredProcedures
             if (outputParameters.Length > 0)
             {
                 var firstOutputParam = command.Parameters[outputParameters[0].parameterName] as DbParameter;
-                if (firstOutputParam?.Value != DBNull.Value)
+                if (firstOutputParam?.Value != null && firstOutputParam.Value != DBNull.Value)
                 {
-                    outputResult1 = (T2)firstOutputParam.Value;
+                    outputResult1 = (T2)firstOutputParam.Value!;
                 }
             }
 

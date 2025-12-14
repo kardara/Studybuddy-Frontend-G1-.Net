@@ -23,17 +23,21 @@ namespace StudyBuddy.Services.Implementations
         private readonly JwtSettings _jwtSettings;
         private readonly ILogger<AuthService> _logger;
 
+        private readonly IConfiguration _configuration;
+    
         public AuthService(
             IUserRepository userRepository,
             IRepository<PasswordResetToken> tokenRepository,
             IEmailService emailService,
             JwtSettings jwtSettings,
+            IConfiguration configuration,
             ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _tokenRepository = tokenRepository;
             _emailService = emailService;
             _jwtSettings = jwtSettings;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -136,8 +140,9 @@ namespace StudyBuddy.Services.Implementations
             await _tokenRepository.AddAsync(token);
             await _tokenRepository.SaveChangesAsync();
 
-            // Create reset link
-            var resetLink = $"https://yourapp.com/reset-password?token={resetToken}";
+            // Create reset link - point to frontend with token and email
+            var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:5173";
+            var resetLink = $"{frontendUrl}/reset-password?token={resetToken}&email={user.Email}";
 
             await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
             return true;

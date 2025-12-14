@@ -410,7 +410,7 @@ namespace StudyBuddy.Services.Implementations
             }
         }
 
-        public async Task<List<AuditLogDto>> GetAuditLogsAsync(int? userId = null, int pageNumber = 1, int pageSize = 20)
+        public Task<List<AuditLogDto>> GetAuditLogsAsync(int? userId = null, int pageNumber = 1, int pageSize = 20)
         {
             try
             {
@@ -427,7 +427,7 @@ namespace StudyBuddy.Services.Implementations
                     .Take(pageSize)
                     .ToList();
 
-                return auditLogs.Select(MapAuditLogToDto).ToList();
+                return Task.FromResult(auditLogs.Select(MapAuditLogToDto).ToList());
             }
             catch (Exception ex)
             {

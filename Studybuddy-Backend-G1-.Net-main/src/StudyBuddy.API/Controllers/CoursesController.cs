@@ -94,6 +94,9 @@ namespace StudyBuddy.API.Controllers
                     return BadRequest(ModelState);
 
                 var course = await _courseService.CreateCourseAsync(request);
+                if (course == null)
+                    return BadRequest(new { message = "Failed to create course" });
+
                 return CreatedAtAction(nameof(GetCourseById), new { id = course.CourseId }, course);
             }
             catch (Exception ex)

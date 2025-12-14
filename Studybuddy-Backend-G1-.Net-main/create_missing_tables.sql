@@ -71,9 +71,19 @@ GO
 -- Update Enrollments.ProgressPercentage
 IF EXISTS (SELECT * FROM sysobjects WHERE name='Enrollments' AND xtype='U')
 BEGIN
-    ALTER TABLE [Enrollments] 
+    ALTER TABLE [Enrollments]
     ALTER COLUMN [ProgressPercentage] DECIMAL(5,2);
 END
 GO
 
-PRINT 'Missing tables created successfully and decimal precision updated.';
+-- Add Difficulty column to Questions table if it doesn't exist
+IF EXISTS (SELECT * FROM sysobjects WHERE name='Questions' AND xtype='U')
+BEGIN
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Questions') AND name = 'Difficulty')
+    BEGIN
+        ALTER TABLE [Questions] ADD [Difficulty] NVARCHAR(20) NULL;
+    END
+END
+GO
+
+PRINT 'Missing tables created successfully, decimal precision updated, and Difficulty column added.';

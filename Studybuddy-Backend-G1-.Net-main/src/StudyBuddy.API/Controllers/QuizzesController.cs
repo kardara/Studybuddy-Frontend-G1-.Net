@@ -177,7 +177,7 @@ namespace StudyBuddy.API.Controllers
             try
             {
                 var result = await _quizService.UnpublishQuizAsync(quizId);
-                
+
                 if (!result)
                     return NotFound(new { message = "Quiz not found" });
 
@@ -187,6 +187,38 @@ namespace StudyBuddy.API.Controllers
             {
                 _logger.LogError(ex, $"Error unpublishing quiz with ID: {quizId}");
                 return StatusCode(500, new { message = "An error occurred while unpublishing the quiz" });
+            }
+        }
+
+        [HttpPatch("{quizId}/status")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ToggleQuizStatus(int quizId, [FromBody] ToggleStatusRequest request)
+        {
+            try
+            {
+                if (request.IsActive)
+                {
+                    var result = await _quizService.PublishQuizAsync(quizId);
+
+                    if (!result)
+                        return NotFound(new { message = "Quiz not found" });
+
+                    return Ok(new { message = "Quiz published successfully" });
+                }
+                else
+                {
+                    var result = await _quizService.UnpublishQuizAsync(quizId);
+
+                    if (!result)
+                        return NotFound(new { message = "Quiz not found" });
+
+                    return Ok(new { message = "Quiz unpublished successfully" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error toggling quiz status with ID: {quizId}");
+                return StatusCode(500, new { message = "An error occurred while updating quiz status" });
             }
         }
 
@@ -249,6 +281,37 @@ namespace StudyBuddy.API.Controllers
             }
         }
 
+        [HttpPost("{quizId}/submit")]
+        [Authorize]
+        public async Task<IActionResult> SubmitQuiz(int quizId, [FromBody] QuizSubmissionRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var studentId = int.Parse(userIdClaim!);
+
+                var result = await _quizService.SubmitQuizAsync(studentId, request);
+
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error submitting quiz ID: {quizId}");
+                return StatusCode(500, new { message = "An error occurred while submitting the quiz" });
+            }
+        }
+
         [HttpPost("attempts/{attemptId}/submit")]
         [Authorize]
         public async Task<IActionResult> SubmitQuizAttempt(int attemptId, [FromBody] SubmitQuizAttemptRequestDto request)
@@ -262,7 +325,7 @@ namespace StudyBuddy.API.Controllers
                 var studentId = int.Parse(userIdClaim!);
 
                 var result = await _quizService.SubmitQuizAttemptAsync(attemptId, studentId, request.Answers);
-                
+
                 if (result == null)
                     return NotFound(new { message = "Quiz attempt not found" });
 

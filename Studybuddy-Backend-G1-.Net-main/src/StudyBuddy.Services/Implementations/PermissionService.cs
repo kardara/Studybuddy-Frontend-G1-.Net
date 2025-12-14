@@ -60,51 +60,51 @@ namespace StudyBuddy.Services.Implementations
             }).ToList();
         }
 
-        public async Task<bool> GrantPermissionToUserAsync(GrantPermissionRequestDto request)
+        public Task<bool> GrantPermissionToUserAsync(GrantPermissionRequestDto request)
         {
             try
             {
                 // For role-based permissions, we grant permissions to roles, not individual users
                 // This method should be updated to grant permissions to roles instead
                 _logger.LogWarning("GrantPermissionToUserAsync should be updated to work with role-based permissions");
-                return false;
+                return Task.FromResult(false);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error granting permission to user: {UserId}", request.UserId);
-                return false;
+                return Task.FromResult(false);
             }
         }
 
-        public async Task<bool> RevokePermissionFromUserAsync(int userId, int permissionId)
+        public Task<bool> RevokePermissionFromUserAsync(int userId, int permissionId)
         {
             try
             {
                 // For role-based permissions, we revoke permissions from roles, not individual users
                 // This method should be updated to work with role-based permissions
                 _logger.LogWarning("RevokePermissionFromUserAsync should be updated to work with role-based permissions");
-                return false;
+                return Task.FromResult(false);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error revoking permission from user: {UserId}", userId);
-                return false;
+                return Task.FromResult(false);
             }
         }
 
-        public async Task<bool> RevokeAllUserPermissionsAsync(int userId)
+        public Task<bool> RevokeAllUserPermissionsAsync(int userId)
         {
             try
             {
                 // For role-based permissions, we revoke permissions from roles, not individual users
                 // This method should be updated to work with role-based permissions
                 _logger.LogWarning("RevokeAllUserPermissionsAsync should be updated to work with role-based permissions");
-                return false;
+                return Task.FromResult(false);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error revoking all permissions for user: {UserId}", userId);
-                return false;
+                return Task.FromResult(false);
             }
         }
 

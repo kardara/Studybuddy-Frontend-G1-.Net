@@ -4,16 +4,19 @@ using StudyBuddy.Core.Models.Domain;
 using StudyBuddy.Core.Models.DTOs.Requests;
 using StudyBuddy.Core.Models.DTOs.Responses;
 using StudyBuddy.Data;
+using System;
 
 namespace StudyBuddy.Services.Implementations
 {
     public class QuizService : IQuizService
     {
         private readonly AppDbContext _context;
+        private readonly ICertificateService _certificateService;
 
-        public QuizService(AppDbContext context)
+        public QuizService(AppDbContext context, ICertificateService certificateService)
         {
             _context = context;
+            _certificateService = certificateService;
         }
 
         #region Basic Quiz Operations
@@ -41,7 +44,7 @@ namespace StudyBuddy.Services.Implementations
                 {
                     QuestionId = q.QuestionId,
                     QuestionText = q.QuestionText,
-                    QuestionType = q.QuestionType,
+                    QuestionType = q.QuestionType ?? "MultipleChoice",
                     Points = q.Points,
                     Options = q.Options.Select(o => new QuestionOptionDto
                     {
@@ -74,7 +77,7 @@ namespace StudyBuddy.Services.Implementations
                 {
                     QuestionId = q.QuestionId,
                     QuestionText = q.QuestionText,
-                    QuestionType = q.QuestionType,
+                    QuestionType = q.QuestionType ?? "MultipleChoice",
                     Points = q.Points,
                     Options = q.Options.Select(o => new QuestionOptionDto
                     {
@@ -107,7 +110,7 @@ namespace StudyBuddy.Services.Implementations
                 {
                     QuestionId = q.QuestionId,
                     QuestionText = q.QuestionText,
-                    QuestionType = q.QuestionType,
+                    QuestionType = q.QuestionType ?? "MultipleChoice",
                     Points = q.Points,
                     Options = q.Options.Select(o => new QuestionOptionDto
                     {
@@ -193,6 +196,9 @@ namespace StudyBuddy.Services.Implementations
             if (request.Description != null)
                 quiz.Description = request.Description;
 
+            if (request.CourseId.HasValue)
+                quiz.CourseId = request.CourseId.Value;
+
             if (request.PassingPercentage.HasValue)
                 quiz.PassingPercentage = request.PassingPercentage.Value;
 
@@ -205,6 +211,9 @@ namespace StudyBuddy.Services.Implementations
             if (request.MaxAttempts.HasValue)
                 quiz.MaxAttempts = request.MaxAttempts.Value;
 
+            if (request.IsActive.HasValue)
+                quiz.Status = request.IsActive.Value ? "Published" : "Draft";
+
             quiz.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -214,11 +223,39 @@ namespace StudyBuddy.Services.Implementations
 
         public async Task<bool> DeleteQuizAsync(int quizId)
         {
-            var quiz = await _context.Quizzes.FirstOrDefaultAsync(q => q.QuizId == quizId);
+            var quiz = await _context.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(q => q.Options)
+                .Include(q => q.QuizAttempts)
+                    .ThenInclude(a => a.StudentAnswers)
+                .FirstOrDefaultAsync(q => q.QuizId == quizId);
+
             if (quiz == null)
                 return false;
 
+            // Delete related entities in correct order to handle foreign key constraints
+
+            // 1. Delete all student answers for quiz attempts
+            foreach (var attempt in quiz.QuizAttempts)
+            {
+                _context.StudentAnswers.RemoveRange(attempt.StudentAnswers);
+            }
+
+            // 2. Delete quiz attempts
+            _context.QuizAttempts.RemoveRange(quiz.QuizAttempts);
+
+            // 3. Delete question options
+            foreach (var question in quiz.Questions)
+            {
+                _context.QuestionOptions.RemoveRange(question.Options);
+            }
+
+            // 4. Delete questions
+            _context.Questions.RemoveRange(quiz.Questions);
+
+            // 5. Delete quiz
             _context.Quizzes.Remove(quiz);
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -249,7 +286,7 @@ namespace StudyBuddy.Services.Implementations
             return true;
         }
 
-        public async Task<IEnumerable<QuizDto>> GetAllQuizzesAsync()
+        public async Task<IEnumerable<QuizListDto>> GetAllQuizzesAsync()
         {
             var quizzes = await _context.Quizzes
                 .Include(q => q.Questions.OrderBy(qu => qu.SequenceOrder))
@@ -258,27 +295,20 @@ namespace StudyBuddy.Services.Implementations
                 .OrderBy(q => q.Title)
                 .ToListAsync();
 
-            return quizzes.Select(quiz => new QuizDto
+            return quizzes.Select(quiz => new QuizListDto
             {
                 QuizId = quiz.QuizId,
                 Title = quiz.Title,
                 Description = quiz.Description,
-                TotalQuestions = quiz.TotalQuestions,
-                PassingPercentage = quiz.PassingPercentage,
-                DurationMinutes = quiz.DurationMinutes,
+                CourseTitle = quiz.Course?.Title ?? "Unknown Course",
+                CourseId = quiz.CourseId,
+                QuestionCount = quiz.TotalQuestions,
+                PassingScore = quiz.PassingPercentage,
+                TimeLimit = quiz.DurationMinutes,
                 MaxAttempts = quiz.MaxAttempts,
-                Questions = quiz.Questions.Select(q => new QuestionDto
-                {
-                    QuestionId = q.QuestionId,
-                    QuestionText = q.QuestionText,
-                    QuestionType = q.QuestionType,
-                    Points = q.Points,
-                    Options = q.Options.Select(o => new QuestionOptionDto
-                    {
-                        OptionId = o.OptionId,
-                        OptionText = o.OptionText
-                    }).ToList()
-                }).ToList()
+                IsActive = quiz.Status == "Published",
+                CreatedAt = quiz.CreatedAt,
+                UpdatedAt = quiz.UpdatedAt
             });
         }
 
@@ -304,7 +334,7 @@ namespace StudyBuddy.Services.Implementations
                 {
                     QuestionId = q.QuestionId,
                     QuestionText = q.QuestionText,
-                    QuestionType = q.QuestionType,
+                    QuestionType = q.QuestionType ?? "MultipleChoice",
                     Points = q.Points,
                     Options = q.Options.Select(o => new QuestionOptionDto
                     {
@@ -326,6 +356,9 @@ namespace StudyBuddy.Services.Implementations
 
             if (quiz == null)
                 throw new InvalidOperationException("Quiz not found");
+
+            if (quiz.Status != "Published")
+                throw new InvalidOperationException("Quiz is not available for submission");
 
             // Check enrollment
             var enrollment = await _context.Enrollments
@@ -423,6 +456,9 @@ namespace StudyBuddy.Services.Implementations
             if (attempt.Status != "InProgress")
                 throw new InvalidOperationException("Quiz attempt is not in progress");
 
+            if (attempt.Quiz.Status != "Published")
+                throw new InvalidOperationException("Quiz is not available for submission");
+
             // Grade the quiz
             int totalScore = 0;
             int maxScore = attempt.Quiz.Questions.Sum(q => q.Points);
@@ -457,7 +493,37 @@ namespace StudyBuddy.Services.Implementations
 
             await _context.SaveChangesAsync();
 
-            return await CreateQuizResultDto(attempt, attempt.Quiz);
+            // If quiz is passed, update enrollment status to completed and issue certificate
+            var isPassed = attempt.PercentageScore >= attempt.Quiz.PassingPercentage;
+            var certificateIssued = false;
+
+            if (isPassed)
+            {
+                var enrollment = await _context.Enrollments
+                    .FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == attempt.Quiz.CourseId);
+
+                if (enrollment != null)
+                {
+                    enrollment.Status = "Completed";
+                    enrollment.ProgressPercentage = 100;
+                    enrollment.CompletedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+
+                    // Issue certificate for course completion
+                    try
+                    {
+                        await _certificateService.IssueCertificateAsync(studentId, attempt.Quiz.CourseId);
+                        certificateIssued = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error but don't fail the quiz submission
+                        Console.WriteLine($"Failed to issue certificate: {ex.Message}");
+                    }
+                }
+            }
+
+            return await CreateQuizResultDto(attempt, attempt.Quiz, certificateIssued);
         }
 
         public async Task<QuizResultDto> SubmitQuizAsync(int studentId, QuizSubmissionRequest submission)
@@ -469,6 +535,9 @@ namespace StudyBuddy.Services.Implementations
 
             if (quiz == null)
                 throw new InvalidOperationException("Quiz not found");
+
+            if (quiz.Status != "Published")
+                throw new InvalidOperationException("Quiz is not available for submission");
 
             // Check enrollment
             var enrollment = await _context.Enrollments
@@ -483,6 +552,12 @@ namespace StudyBuddy.Services.Implementations
 
             if (attemptCount >= quiz.MaxAttempts)
                 throw new InvalidOperationException("Maximum attempts reached");
+
+            if (submission.Answers.Count == 0)
+                throw new InvalidOperationException("No answers provided");
+
+            if (submission.Answers.Count != quiz.Questions.Count)
+                throw new InvalidOperationException("Number of answers does not match number of questions");
 
             // Create quiz attempt
             var attempt = new QuizAttempt
@@ -527,11 +602,42 @@ namespace StudyBuddy.Services.Implementations
             attempt.TotalScore = totalScore;
             attempt.MaxScore = maxScore;
             attempt.PercentageScore = maxScore > 0 ? (decimal)totalScore / maxScore * 100 : 0;
+            attempt.Status = "Graded";
             // IsPassed is calculated from PercentageScore >= PassingPercentage
 
             await _context.SaveChangesAsync();
 
-            return await CreateQuizResultDto(attempt, quiz);
+            // If quiz is passed, update enrollment status to completed and issue certificate
+            var isPassed = attempt.PercentageScore >= quiz.PassingPercentage;
+            var certificateIssued = false;
+
+            if (isPassed)
+            {
+                var studentEnrollment = await _context.Enrollments
+                    .FirstOrDefaultAsync(e => e.StudentId == studentId && e.CourseId == quiz.CourseId);
+
+                if (studentEnrollment != null)
+                {
+                    studentEnrollment.Status = "Completed";
+                    studentEnrollment.ProgressPercentage = 100;
+                    studentEnrollment.CompletedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+
+                    // Issue certificate for course completion
+                    try
+                    {
+                        await _certificateService.IssueCertificateAsync(studentId, quiz.CourseId);
+                        certificateIssued = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error but don't fail the quiz submission
+                        Console.WriteLine($"Failed to issue certificate: {ex.Message}");
+                    }
+                }
+            }
+
+            return await CreateQuizResultDto(attempt, quiz, certificateIssued);
         }
 
         public async Task<QuizResultDto?> GetQuizAttemptAsync(int attemptId, int studentId)
@@ -603,6 +709,14 @@ namespace StudyBuddy.Services.Implementations
             if (!quiz.AllowRetake)
                 return false;
 
+            // Check if student has already passed this quiz
+            var hasPassed = await _context.QuizAttempts
+                .AnyAsync(qa => qa.StudentId == studentId && qa.QuizId == quizId &&
+                               qa.Status == "Graded" && qa.PercentageScore >= quiz.PassingPercentage);
+
+            if (hasPassed)
+                return false; // Cannot retake if already passed
+
             var attemptCount = await _context.QuizAttempts
                 .CountAsync(qa => qa.StudentId == studentId && qa.QuizId == quizId && qa.Status == "Graded");
 
@@ -613,12 +727,15 @@ namespace StudyBuddy.Services.Implementations
 
         #region Helper Methods
 
-        private async Task<QuizResultDto> CreateQuizResultDto(QuizAttempt attempt, Quiz quiz)
+        private async Task<QuizResultDto> CreateQuizResultDto(QuizAttempt attempt, Quiz quiz, bool certificateIssued = false)
         {
             var attemptCount = await _context.QuizAttempts
                 .CountAsync(qa => qa.StudentId == attempt.StudentId && qa.QuizId == attempt.QuizId);
 
             var isPassed = attempt.PercentageScore >= quiz.PassingPercentage;
+
+            // Get question results
+            var questionResults = await GetQuestionResultsForAttemptAsync(attempt.AttemptId);
 
             return new QuizResultDto
             {
@@ -633,8 +750,44 @@ namespace StudyBuddy.Services.Implementations
                 IsPassed = isPassed,
                 AttemptsUsed = attemptCount,
                 MaxAttempts = quiz.MaxAttempts,
-                CanRetake = attemptCount < quiz.MaxAttempts
+                CanRetake = attemptCount < quiz.MaxAttempts,
+                CertificateIssued = certificateIssued,
+                QuestionResults = questionResults
             };
+        }
+
+        private async Task<List<QuestionResultDto>> GetQuestionResultsForAttemptAsync(int attemptId)
+        {
+            var studentAnswers = await _context.StudentAnswers
+                .Include(sa => sa.Question)
+                    .ThenInclude(q => q.Options)
+                .Where(sa => sa.AttemptId == attemptId)
+                .ToListAsync();
+
+            var questionResults = new List<QuestionResultDto>();
+
+            foreach (var answer in studentAnswers)
+            {
+                var question = answer.Question;
+                var correctOption = question.Options.FirstOrDefault(o => o.IsCorrect);
+                var selectedOption = question.Options.FirstOrDefault(o => o.OptionId == answer.SelectedOptionId);
+
+                var studentAnswerText = selectedOption?.OptionText ?? answer.AnswerText ?? "Not answered";
+                var correctAnswerText = correctOption?.OptionText ?? "No correct answer";
+
+                questionResults.Add(new QuestionResultDto
+                {
+                    QuestionId = question.QuestionId,
+                    QuestionText = question.QuestionText,
+                    StudentAnswer = studentAnswerText,
+                    CorrectAnswer = correctAnswerText,
+                    IsCorrect = answer.IsCorrect ?? false,
+                    PointsEarned = (answer.IsCorrect ?? false) ? question.Points : 0,
+                    PointsTotal = question.Points
+                });
+            }
+
+            return questionResults.OrderBy(qr => qr.QuestionId).ToList();
         }
 
         #endregion

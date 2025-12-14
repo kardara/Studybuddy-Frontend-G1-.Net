@@ -35,6 +35,8 @@ namespace StudyBuddy.Core.Models.DTOs.Requests
 
         public string? Description { get; set; }
 
+        public int? CourseId { get; set; }
+
         public int? PassingPercentage { get; set; }
 
         public int? DurationMinutes { get; set; }
@@ -42,6 +44,8 @@ namespace StudyBuddy.Core.Models.DTOs.Requests
         public bool? AllowRetake { get; set; }
 
         public int? MaxAttempts { get; set; }
+
+        public bool? IsActive { get; set; }
     }
 
     public class SubmitQuizAttemptRequestDto
@@ -81,5 +85,10 @@ namespace StudyBuddy.Core.Models.DTOs.Requests
         public string OptionText { get; set; } = string.Empty;
 
         public bool IsCorrect { get; set; }
+    }
+
+    public class ToggleStatusRequest
+    {
+        public bool IsActive { get; set; }
     }
 }

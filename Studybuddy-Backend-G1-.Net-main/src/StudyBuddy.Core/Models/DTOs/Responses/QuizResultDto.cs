@@ -14,6 +14,19 @@ namespace StudyBuddy.Core.Models.DTOs.Responses
         public int AttemptsUsed { get; set; }
         public int MaxAttempts { get; set; }
         public bool CanRetake { get; set; }
+        public bool CertificateIssued { get; set; }
+        public List<QuestionResultDto> QuestionResults { get; set; } = new();
+    }
+
+    public class QuestionResultDto
+    {
+        public int QuestionId { get; set; }
+        public string QuestionText { get; set; } = string.Empty;
+        public string StudentAnswer { get; set; } = string.Empty;
+        public string CorrectAnswer { get; set; } = string.Empty;
+        public bool IsCorrect { get; set; }
+        public int PointsEarned { get; set; }
+        public int PointsTotal { get; set; }
     }
 
     public class QuizAttemptResponseDto

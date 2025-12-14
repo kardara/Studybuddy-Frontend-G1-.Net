@@ -49,11 +49,16 @@ namespace StudyBuddy.Services.Implementations
                 var startDate = request.StartDate ?? DateTime.UtcNow.AddDays(-30);
                 var endDate = request.EndDate ?? DateTime.UtcNow;
 
-                // Optimize: Use single queries with aggregations instead of multiple calls
-                var totalCourses = await _courseRepository.CountAsync(c => c.Status == "Published");
+                // Get all required counts
+                var totalUsers = await _userRepository.CountAsync();
                 var totalStudents = await _userRepository.CountAsync(u => u.Role == "Student");
+                var totalAdmins = await _userRepository.CountAsync(u => u.Role == "Admin");
+                var totalCourses = await _courseRepository.CountAsync();
+                var publishedCourses = await _courseRepository.CountAsync(c => c.Status == "Published");
                 var totalEnrollments = await _enrollmentRepository.CountAsync();
+                var totalQuizzes = await _quizRepository.CountAsync();
                 var totalCertificates = await _certificateRepository.CountAsync();
+
                 // Get active students today with optimized query
                 var today = DateTime.UtcNow.Date;
                 var activeStudentsToday = await _userActivityRepository.CountAsync(
@@ -61,8 +66,8 @@ namespace StudyBuddy.Services.Implementations
 
                 // Get quiz attempts in date range with single query
                 var totalQuizzesSubmitted = await _quizAttemptRepository.CountAsync(
-                    qa => qa.CompletedAt.HasValue && 
-                          qa.CompletedAt.Value.Date >= startDate.Date && 
+                    qa => qa.CompletedAt.HasValue &&
+                          qa.CompletedAt.Value.Date >= startDate.Date &&
                           qa.CompletedAt.Value.Date <= endDate.Date);
 
                 // Optimize average completion rate calculation
@@ -79,9 +84,14 @@ namespace StudyBuddy.Services.Implementations
 
                 return new DashboardAnalyticsDto
                 {
-                    TotalCourses = totalCourses,
+                    TotalUsers = totalUsers,
                     TotalStudents = totalStudents,
+                    TotalAdmins = totalAdmins,
+                    TotalCourses = totalCourses,
+                    PublishedCourses = publishedCourses,
                     TotalEnrollments = totalEnrollments,
+                    TotalQuizzes = totalQuizzes,
+                    TotalCertificates = totalCertificates,
                     ActiveStudentsToday = activeStudentsToday,
                     TotalQuizzesSubmitted = totalQuizzesSubmitted,
                     AverageCompletionRate = Math.Round(averageCompletionRate, 2),
@@ -406,10 +416,10 @@ namespace StudyBuddy.Services.Implementations
                     .ToListAsync();
 
                 var quizAttempts = await _quizAttemptRepository.GetQueryable()
-                    .Where(qa => qa.CompletedAt.HasValue && 
-                                qa.CompletedAt.Value.Date >= currentDate && 
+                    .Where(qa => qa.CompletedAt.HasValue &&
+                                qa.CompletedAt.Value.Date >= currentDate &&
                                 qa.CompletedAt.Value.Date <= endDateOnly)
-                    .GroupBy(qa => qa.CompletedAt.Value.Date)
+                    .GroupBy(qa => qa.CompletedAt!.Value.Date)
                     .Select(g => new { Date = g.Key, Count = g.Count() })
                     .ToListAsync();
 

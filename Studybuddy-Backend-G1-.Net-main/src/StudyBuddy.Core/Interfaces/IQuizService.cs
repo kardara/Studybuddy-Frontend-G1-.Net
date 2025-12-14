@@ -16,7 +16,7 @@ namespace StudyBuddy.Core.Interfaces
         Task<bool> DeleteQuizAsync(int quizId);
         Task<bool> PublishQuizAsync(int quizId);
         Task<bool> UnpublishQuizAsync(int quizId);
-        Task<IEnumerable<QuizDto>> GetAllQuizzesAsync();
+        Task<IEnumerable<QuizListDto>> GetAllQuizzesAsync();
         Task<IEnumerable<QuizDto>> GetAllQuizzesForCourseAsync(int courseId);
         
         // Quiz attempts

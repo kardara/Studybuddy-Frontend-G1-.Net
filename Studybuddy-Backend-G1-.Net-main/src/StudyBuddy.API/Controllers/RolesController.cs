@@ -198,16 +198,16 @@ namespace StudyBuddy.API.Controllers
             };
         }
 
-        private async Task<RoleDto> CreateRoleAsync(CreateRoleRequestDto request)
+        private Task<RoleDto> CreateRoleAsync(CreateRoleRequestDto request)
         {
             // For this implementation, we'll consider roles as strings in the User table
             // In a more complex scenario, you might have a separate Roles table
-            return new RoleDto
+            return Task.FromResult(new RoleDto
             {
                 RoleName = request.RoleName,
                 Description = request.Description ?? "",
                 Permissions = new List<PermissionDto>()
-            };
+            });
         }
 
         private async Task<RoleDto?> UpdateRoleAsync(string roleName, UpdateRoleRequestDto request)
@@ -216,11 +216,11 @@ namespace StudyBuddy.API.Controllers
             return await GetRoleByNameAsync(roleName);
         }
 
-        private async Task<bool> DeleteRoleAsync(string roleName)
+        private Task<bool> DeleteRoleAsync(string roleName)
         {
             // Implementation for deleting role
             // This would remove all role permissions and potentially the role itself
-            return true;
+            return Task.FromResult(true);
         }
 
         private async Task<bool> AssignPermissionToRoleAsync(string roleName, int permissionId)
