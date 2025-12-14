@@ -12,5 +12,8 @@ namespace StudyBuddy.Core.Models.Domain
         public string PermissionName { get; set; } = string.Empty;
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        
+        // Navigation Properties
+        public ICollection<UserPermission> UserPermissions { get; set; } = new List<UserPermission>();
     }
 }

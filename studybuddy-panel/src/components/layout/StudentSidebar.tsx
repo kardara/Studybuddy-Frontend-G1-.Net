@@ -3,10 +3,10 @@ import {
   LayoutDashboard,
   BookOpen,
   Play,
+  TrendingUp,
   ClipboardList,
   MessageSquare,
   Award,
-  Settings,
   LogOut,
   GraduationCap,
   ChevronLeft,
@@ -20,9 +20,7 @@ const menuItems = [
   { icon: BookOpen, label: "My Courses", path: "/student/courses" },
   { icon: Play, label: "Continue Learning", path: "/student/continue" },
   { icon: ClipboardList, label: "Quizzes", path: "/student/quizzes" },
-  { icon: MessageSquare, label: "AI Chat Tutor", path: "/student/chat" },
   { icon: Award, label: "Certificates", path: "/student/certificates" },
-  { icon: Settings, label: "Settings", path: "/student/settings" },
 ];
 
 export function StudentSidebar() {

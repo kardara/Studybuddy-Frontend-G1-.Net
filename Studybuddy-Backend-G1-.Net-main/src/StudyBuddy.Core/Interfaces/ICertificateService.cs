@@ -7,5 +7,6 @@ namespace StudyBuddy.Core.Interfaces
         Task<CertificateDto?> IssueCertificateAsync(int studentId, int courseId);
         Task<IEnumerable<CertificateDto>> GetStudentCertificatesAsync(int studentId);
         Task<CertificateDto?> GetCertificateByNumberAsync(string certificateNumber);
+        Task<byte[]> DownloadCertificatePdfAsync(int certificateId, int studentId);
     }
 }

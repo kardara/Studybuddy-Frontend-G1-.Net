@@ -1,89 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ClipboardList, Clock, CheckCircle, XCircle, Play, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Quiz {
-  id: string;
-  title: string;
-  course: string;
-  questions: number;
-  duration: string;
-  passScore: number;
-  status: "pending" | "completed" | "failed";
-  score?: number;
-  completedDate?: string;
-  dueDate?: string;
-}
-
-const quizzes: Quiz[] = [
-  {
-    id: "1",
-    title: "React Hooks Quiz",
-    course: "React Fundamentals",
-    questions: 15,
-    duration: "20 min",
-    passScore: 70,
-    status: "pending",
-    dueDate: "Dec 8, 2025",
-  },
-  {
-    id: "2",
-    title: "Python Variables Test",
-    course: "Python for Data Science",
-    questions: 20,
-    duration: "30 min",
-    passScore: 60,
-    status: "pending",
-    dueDate: "Dec 10, 2025",
-  },
-  {
-    id: "3",
-    title: "JSX Fundamentals Quiz",
-    course: "React Fundamentals",
-    questions: 10,
-    duration: "15 min",
-    passScore: 70,
-    status: "completed",
-    score: 90,
-    completedDate: "Dec 4, 2025",
-  },
-  {
-    id: "4",
-    title: "React Components Quiz",
-    course: "React Fundamentals",
-    questions: 12,
-    duration: "20 min",
-    passScore: 70,
-    status: "completed",
-    score: 85,
-    completedDate: "Dec 2, 2025",
-  },
-  {
-    id: "5",
-    title: "Data Types in Python",
-    course: "Python for Data Science",
-    questions: 15,
-    duration: "25 min",
-    passScore: 65,
-    status: "failed",
-    score: 55,
-    completedDate: "Nov 30, 2025",
-  },
-];
+import { quizzesService, StudentQuizAttempt } from "@/services/api/quizzes.service";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StudentQuizzes() {
   const [activeTab, setActiveTab] = useState<"pending" | "completed" | "failed">("pending");
+  const [quizzes, setQuizzes] = useState<StudentQuizAttempt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const filteredQuizzes = quizzes.filter((quiz) => {
-    if (activeTab === "pending") return quiz.status === "pending";
-    if (activeTab === "completed") return quiz.status === "completed";
-    if (activeTab === "failed") return quiz.status === "failed";
-    return true;
+  useEffect(() => {
+    fetchQuizzes();
+  }, []);
+
+  const fetchQuizzes = async () => {
+    try {
+      setLoading(true);
+      const data = await quizzesService.getStudentQuizAttempts();
+      setQuizzes(data);
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch quiz attempts",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pendingCount = quizzes.filter(q => q.status === 'in_progress').length;
+  const completedCount = quizzes.filter(q => q.status === 'completed' && (q.score || 0) >= 70).length;
+  const failedCount = quizzes.filter(q => q.status === 'completed' && (q.score || 0) < 70).length;
+
+  const filteredQuizzes = quizzes.filter(quiz => {
+    if (activeTab === "pending") return quiz.status === 'in_progress';
+    if (activeTab === "completed") return quiz.status === 'completed' && (quiz.score || 0) >= 70;
+    if (activeTab === "failed") return quiz.status === 'completed' && (quiz.score || 0) < 70;
+    return false;
   });
 
-  const pendingCount = quizzes.filter((q) => q.status === "pending").length;
-  const completedCount = quizzes.filter((q) => q.status === "completed").length;
-  const failedCount = quizzes.filter((q) => q.status === "failed").length;
+  const getStatusIcon = (status: string, score?: number) => {
+    if (status === 'in_progress') return <Clock className="w-4 h-4 text-primary" />;
+    if (status === 'completed' && (score || 0) >= 70) return <CheckCircle className="w-4 h-4 text-success" />;
+    return <XCircle className="w-4 h-4 text-destructive" />;
+  };
+
+  const getStatusBadge = (status: string, score?: number) => {
+    if (status === 'in_progress') return <span className="badge badge-primary">In Progress</span>;
+    if (status === 'completed' && (score || 0) >= 70) return <span className="badge badge-success">Passed</span>;
+    return <span className="badge badge-destructive">Failed</span>;
+  };
+
+  if (loading) {
+    return (
+      <div className="animate-fade-in flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
@@ -172,100 +149,74 @@ export default function StudentQuizzes() {
       </div>
 
       {/* Quiz List */}
-      <div className="space-y-4">
-        {filteredQuizzes.map((quiz) => (
-          <div key={quiz.id} className="dashboard-card p-6">
-            <div className="flex flex-col md:flex-row md:items-center gap-6">
-              {/* Icon */}
-              <div
-                className={cn(
-                  "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
-                  quiz.status === "pending" && "bg-primary/10",
-                  quiz.status === "completed" && "bg-success/10",
-                  quiz.status === "failed" && "bg-destructive/10"
-                )}
-              >
-                {quiz.status === "pending" && (
-                  <ClipboardList className="w-7 h-7 text-primary" />
-                )}
-                {quiz.status === "completed" && (
-                  <CheckCircle className="w-7 h-7 text-success" />
-                )}
-                {quiz.status === "failed" && (
-                  <XCircle className="w-7 h-7 text-destructive" />
-                )}
-              </div>
+      {filteredQuizzes.length === 0 ? (
+        <div className="dashboard-card p-12 text-center">
+          <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="font-semibold mb-2">No {activeTab} quizzes</h3>
+          <p className="text-muted-foreground">
+            {activeTab === "pending"
+              ? "You don't have any pending quizzes at the moment."
+              : activeTab === "completed"
+                ? "You haven't passed any quizzes yet."
+                : "You haven't failed any quizzes yet."
+            }
+          </p>
+        </div>
+      ) : (
+        <div className="dashboard-card">
+          <div className="p-6">
+            <div className="space-y-4">
+              {filteredQuizzes.map((quiz) => (
+                <div
+                  key={quiz.attemptId}
+                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0">
+                      {getStatusIcon(quiz.status, quiz.score)}
+                    </div>
+                    <div>
+                      <h3 className="font-medium">{quiz.quizTitle}</h3>
+                      <p className="text-sm text-muted-foreground">{quiz.courseTitle}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getStatusBadge(quiz.status, quiz.score)}
+                        {quiz.submittedAt && (
+                          <span className="text-xs text-muted-foreground">
+                            Submitted {new Date(quiz.submittedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Info */}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold">{quiz.title}</h3>
-                <p className="text-sm text-muted-foreground mb-2">{quiz.course}</p>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <span>{quiz.questions} questions</span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    {quiz.duration}
-                  </span>
-                  <span>Pass score: {quiz.passScore}%</span>
+                  <div className="flex items-center gap-4">
+                    {quiz.status === 'completed' && quiz.score !== undefined && (
+                      <div className="text-right">
+                        <p className="font-medium">{quiz.score}%</p>
+                        <p className="text-xs text-muted-foreground">
+                          {quiz.correctAnswers}/{quiz.totalQuestions} correct
+                        </p>
+                      </div>
+                    )}
+
+                    {quiz.status === 'in_progress' ? (
+                      <button className="btn-primary btn-sm">
+                        <Play className="w-4 h-4" />
+                        Continue
+                      </button>
+                    ) : (
+                      <button className="btn-outline btn-sm">
+                        <ArrowRight className="w-4 h-4" />
+                        Review
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-
-              {/* Status & Action */}
-              <div className="text-right">
-                {quiz.status === "pending" && (
-                  <>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Due: {quiz.dueDate}
-                    </p>
-                    <button className="btn-primary">
-                      <Play className="w-4 h-4" />
-                      Start Quiz
-                    </button>
-                  </>
-                )}
-                {quiz.status === "completed" && (
-                  <>
-                    <p className="text-2xl font-bold text-success mb-1">
-                      {quiz.score}%
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Completed {quiz.completedDate}
-                    </p>
-                  </>
-                )}
-                {quiz.status === "failed" && (
-                  <>
-                    <p className="text-2xl font-bold text-destructive mb-1">
-                      {quiz.score}%
-                    </p>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Failed {quiz.completedDate}
-                    </p>
-                    <button className="btn-outline">
-                      <ArrowRight className="w-4 h-4" />
-                      Retry Quiz
-                    </button>
-                  </>
-                )}
-              </div>
+              ))}
             </div>
           </div>
-        ))}
-
-        {filteredQuizzes.length === 0 && (
-          <div className="dashboard-card p-12 text-center">
-            <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No quizzes found</h3>
-            <p className="text-muted-foreground">
-              {activeTab === "pending"
-                ? "You have no pending quizzes at the moment."
-                : activeTab === "completed"
-                ? "You haven't passed any quizzes yet."
-                : "Great job! You haven't failed any quizzes."}
-            </p>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

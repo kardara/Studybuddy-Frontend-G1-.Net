@@ -1,0 +1,142 @@
+# StudyBuddy Backend Environment Configuration
+# Copy this file to .env.local and update with your actual values
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+ConnectionStrings__DefaultConnection=Server=db33783.public.databaseasp.net,1433;Database=db33783;User Id=db33783;Password=Kardara123!;TrustServerCertificate=true;MultipleActiveResultSets=true
+
+# Alternative connection string for SQL Server
+# ConnectionStrings__DefaultConnection=Server=localhost;Database=StudyBuddyDB;User Id=sa;Password=YourPassword123!;TrustServerCertificate=true
+
+# =============================================================================
+# JWT AUTHENTICATION SETTINGS
+# =============================================================================
+Jwt__SecretKey=i0VzUPFXn/IXEcE1+U0MBFWq5u60XOLWuwsjYP6hwPQV0h8Bmc/GI7ftdu1xeBbf+AmHxlQrL6OHuPCAASy2KQ==
+Jwt__Issuer=StudyBuddy.API
+Jwt__Audience=StudyBuddy.Client
+Jwt__ExpirationMinutes=60
+Jwt__RefreshTokenExpirationDays=7
+
+# =============================================================================
+# OPENROUTER INTEGRATION SETTINGS
+# =============================================================================
+AI__ApiKey=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
+AI__Model=openai/gpt-4o
+AI__Organization=your-organization-id (optional)
+AI__MaxTokens=4000
+AI__Temperature=0.7
+
+# =============================================================================
+# EMAIL SERVICE CONFIGURATION
+# =============================================================================
+Email__SmtpHost=smtp.gmail.com
+Email__SmtpPort=587
+Email__FromAddress=noreply@studybuddy.com
+Email__SenderName=StudyBuddy Team
+Email__Username=azdjerou@gmail.com
+Email__Password=rslp eclz rrxs kntv
+Email__EnableSSL=true
+
+# Alternative email providers
+# Email__SmtpHost=smtp.sendgrid.net
+# Email__SmtpPort=587
+# Email__Username=apikey
+# Email__Password=your-sendgrid-api-key
+
+# =============================================================================
+# CERTIFICATE SETTINGS
+# =============================================================================
+CertificateSettings__TemplateHtml=<!DOCTYPE html><html><head><style>body { font-family: Arial, sans-serif; text-align: center; padding: 50px; } .certificate { background: white; padding: 50px; border: 3px solid gold; border-radius: 10px; max-width: 800px; margin: auto; } .title { font-size: 36px; color: #333; margin: 20px 0; } .student-name { font-size: 28px; color: #667eea; margin: 30px 0; }</style></head><body><div class='certificate'><div class='title'>Certificate of Completion</div><p>This certifies that</p><div class='student-name'>{StudentName}</div><p>has successfully completed the course</p><div>{CourseName}</div><p>Issued on {IssuedDate}</p><p>Certificate No: {CertificateNumber}</p></div></body></html>
+CertificateSettings__LogoUrl=https://your-domain.com/logo.png
+CertificateSettings__FontFamily=Arial, sans-serif
+
+# =============================================================================
+# FILE STORAGE SETTINGS
+# =============================================================================
+FileStorage__MaxUploadSizeMB=100
+FileStorage__AllowedExtensions=.pdf,.jpg,.jpeg,.png,.doc,.docx
+FileStorage__StoragePath=C:\StudyBuddy\uploads
+FileStorage__CertificatesPath=C:\StudyBuddy\certificates
+
+# =============================================================================
+# QUIZ CONFIGURATION
+# =============================================================================
+Quiz__DefaultPassingPercentage=70
+Quiz__DefaultMaxAttempts=3
+Quiz__AllowRetakeByDefault=true
+Quiz__QuestionsPerQuiz__Min=5
+Quiz__QuestionsPerQuiz__Max=10
+
+# =============================================================================
+# PASSWORD RESET SETTINGS
+# =============================================================================
+PasswordReset__TokenExpirationHours=24
+PasswordReset__BaseUrl=https://localhost:5103
+
+# =============================================================================
+# CORS SETTINGS
+# =============================================================================
+Cors__AllowedOrigins=http://localhost:3000,http://localhost:8080,https://localhost:8081
+
+# =============================================================================
+# LOGGING SETTINGS
+# =============================================================================
+Logging__LogLevel__Default=Information
+Logging__LogLevel__Microsoft.AspNetCore=Warning
+Logging__LogLevel__StudyBuddy=Debug
+
+# =============================================================================
+# APPLICATION SETTINGS
+# =============================================================================
+Application__Environment=Development
+Application__BaseUrl=https://localhost:5103
+Application__ApiVersion=v1
+Application__EnableSwagger=true
+Application__EnableCors=true
+Application__EnableHttpsRedirection=true
+
+# =============================================================================
+# SECURITY SETTINGS
+# =============================================================================
+Security__PasswordMinLength=8
+Security__PasswordRequireUppercase=true
+Security__PasswordRequireLowercase=true
+Security__PasswordRequireNumbers=true
+Security__PasswordRequireSpecialChars=true
+Security__MaxLoginAttempts=5
+Security__LockoutDurationMinutes=30
+
+# =============================================================================
+# AI CONTENT GENERATION SETTINGS
+# =============================================================================
+AIContent__MaxCourseModules=10
+AIContent__MaxLessonsPerModule=8
+AIContent__MaxQuestionsPerQuiz=10
+AIContent__EnableYouTubeSearch=true
+AIContent__ContentGenerationTimeoutMinutes=30
+
+# =============================================================================
+# NOTIFICATION SETTINGS
+# =============================================================================
+Notifications__SendWelcomeEmail=true
+Notifications__SendEnrollmentConfirmation=true
+Notifications__SendCertificateEmail=true
+Notifications__SendPasswordResetEmail=true
+Notifications__SendAccountBlockNotification=true
+
+# =============================================================================
+# ANALYTICS SETTINGS
+# =============================================================================
+Analytics__EnableUserActivityTracking=true
+Analytics__EnableDailySnapshots=true
+Analytics__SnapshotTime=02:00
+
+# =============================================================================
+# DEVELOPMENT SETTINGS (Only for Development Environment)
+# =============================================================================
+# Development__SeedDatabase=true
+# Development__CreateDefaultAdmin=true
+# Development__AdminEmail=admin@studybuddy.com
+# Development__AdminPassword=Admin123!
+# Development__EnableDetailedLogging=true

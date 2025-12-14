@@ -17,6 +17,13 @@ namespace StudyBuddy.Core.Interfaces
         Task RemoveAsync(T entity);
         Task RemoveRangeAsync(IEnumerable<T> entities);
         Task<bool> AnyAsync(Expression<Func<T, bool>> predicate);
+        Task<int> CountAsync(Expression<Func<T, bool>>? predicate = null);
+        Task<IEnumerable<T>> GetAsync(Expression<Func<T, bool>>? predicate = null,
+                                      Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+                                      int pageNumber = 1,
+                                      int pageSize = 10);
+        IQueryable<T> GetQueryable();
+        Task DeleteAsync(int id);
         Task SaveChangesAsync();
     }
 }

@@ -30,12 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (credentials: LoginRequest) => {
         const response = await authService.login(credentials);
-        setUser({ email: response.email, role: response.role });
+        setUser({ userId: response.userId, email: response.email, role: response.role, fullName: response.fullName });
     };
 
     const register = async (data: RegisterRequest) => {
-        const response = await authService.register(data);
-        setUser({ email: response.email, role: response.role });
+        const fullName = `${data.firstName} ${data.lastName}`;
+        const registerData = { ...data, fullName };
+        const response = await authService.register(registerData);
+        setUser({ userId: response.userId, email: response.email, role: response.role, fullName: response.fullName });
     };
 
     const logout = () => {

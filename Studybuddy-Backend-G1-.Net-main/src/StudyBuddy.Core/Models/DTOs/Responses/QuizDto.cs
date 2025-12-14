@@ -3,12 +3,17 @@ namespace StudyBuddy.Core.Models.DTOs.Responses
     public class QuizDto
     {
         public int QuizId { get; set; }
+        public int CourseId { get; set; }
+        public int? ModuleId { get; set; }
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public int TotalQuestions { get; set; }
         public int PassingPercentage { get; set; }
         public int? DurationMinutes { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public bool AllowRetake { get; set; }
         public int MaxAttempts { get; set; }
+        public DateTime CreatedAt { get; set; }
         public List<QuestionDto> Questions { get; set; } = new();
     }
 
@@ -25,5 +30,6 @@ namespace StudyBuddy.Core.Models.DTOs.Responses
     {
         public int OptionId { get; set; }
         public string OptionText { get; set; } = string.Empty;
+        public bool IsCorrect { get; set; }
     }
 }

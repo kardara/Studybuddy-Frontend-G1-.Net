@@ -13,6 +13,7 @@ namespace StudyBuddy.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
         public DbSet<Course> Courses { get; set; }
         public DbSet<Module> Modules { get; set; }
         public DbSet<Lesson> Lessons { get; set; }
@@ -26,15 +27,20 @@ namespace StudyBuddy.Data
         public DbSet<StudentAnswer> StudentAnswers { get; set; }
         public DbSet<Certificate> Certificates { get; set; }
         public DbSet<CertificateTemplate> CertificateTemplates { get; set; }
-        public DbSet<ChatSession> ChatSessions { get; set; }
-        public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<FAQTracker> FAQTrackers { get; set; }
         public DbSet<UserActivity> UserActivities { get; set; }
         public DbSet<AnalyticsSnapshot> AnalyticsSnapshots { get; set; }
+        public DbSet<UserPermission> UserPermissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // === TABLE NAME CONFIGURATIONS ===
+            // Explicitly configure table names to match the existing database schema
+            modelBuilder.Entity<AuditLog>().ToTable("AuditLog");
+            modelBuilder.Entity<UserActivity>().ToTable("UserActivity");
+            modelBuilder.Entity<StudentProgress>().ToTable("StudentProgress");
 
             // === PRIMARY KEY CONFIGURATIONS ===
             // Explicitly configure all primary keys to avoid EF Core detection issues
@@ -42,6 +48,7 @@ namespace StudyBuddy.Data
             modelBuilder.Entity<Permission>().HasKey(p => p.PermissionId);
             modelBuilder.Entity<RolePermission>().HasKey(rp => rp.RolePermissionId);
             modelBuilder.Entity<AuditLog>().HasKey(a => a.AuditLogId);
+            modelBuilder.Entity<PasswordResetToken>().HasKey(prt => prt.TokenId);
             modelBuilder.Entity<Course>().HasKey(c => c.CourseId);
             modelBuilder.Entity<Module>().HasKey(m => m.ModuleId);
             modelBuilder.Entity<Lesson>().HasKey(l => l.LessonId);
@@ -55,11 +62,27 @@ namespace StudyBuddy.Data
             modelBuilder.Entity<StudentAnswer>().HasKey(sa => sa.AnswerId);
             modelBuilder.Entity<Certificate>().HasKey(c => c.CertificateId);
             modelBuilder.Entity<CertificateTemplate>().HasKey(ct => ct.TemplateId);
-            modelBuilder.Entity<ChatSession>().HasKey(cs => cs.SessionId);
-            modelBuilder.Entity<ChatMessage>().HasKey(cm => cm.MessageId);
             modelBuilder.Entity<FAQTracker>().HasKey(f => f.FAQId);
             modelBuilder.Entity<UserActivity>().HasKey(ua => ua.ActivityId);
             modelBuilder.Entity<AnalyticsSnapshot>().HasKey(a => a.SnapshotId);
+
+            // UserPermission
+            modelBuilder.Entity<UserPermission>().HasKey(up => up.UserPermissionId);
+            modelBuilder.Entity<UserPermission>()
+                .HasIndex(up => new { up.UserId, up.PermissionId })
+                .IsUnique();
+
+            modelBuilder.Entity<UserPermission>()
+                .HasOne(up => up.User)
+                .WithMany(u => u.UserPermissions)
+                .HasForeignKey(up => up.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<UserPermission>()
+                .HasOne(up => up.Permission)
+                .WithMany(p => p.UserPermissions)
+                .HasForeignKey(up => up.PermissionId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // === RELATIONSHIP CONFIGURATIONS ===
             // User - AuditLog (One-to-Many)
@@ -68,6 +91,13 @@ namespace StudyBuddy.Data
                 .WithOne(a => a.User)
                 .HasForeignKey(a => a.UserId)
                 .OnDelete(DeleteBehavior.Restrict); // Prevent deleting user if logs exist
+
+            // User - PasswordResetToken (One-to-Many)
+            modelBuilder.Entity<User>()
+                .HasMany(u => u.PasswordResetTokens)
+                .WithOne(prt => prt.User)
+                .HasForeignKey(prt => prt.UserId)
+                .OnDelete(DeleteBehavior.Cascade); // Delete tokens when user is deleted
 
             // User - Course (Creator) (One-to-Many)
             modelBuilder.Entity<User>()
@@ -106,7 +136,7 @@ namespace StudyBuddy.Data
 
             // Enrollment (Many-to-Many User-Course)
             modelBuilder.Entity<Enrollment>()
-                .HasKey(e => new { e.StudentId, e.CourseId }); // Composite Key? No, using ID. But unique constraint needed.
+                .HasKey(e => e.EnrollmentId);
 
             modelBuilder.Entity<Enrollment>()
                 .HasIndex(e => new { e.StudentId, e.CourseId })
@@ -223,32 +253,6 @@ namespace StudyBuddy.Data
                 .HasForeignKey(c => c.CourseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ChatSession
-            modelBuilder.Entity<ChatSession>()
-                .HasOne(cs => cs.Student)
-                .WithMany(u => u.ChatSessions)
-                .HasForeignKey(cs => cs.StudentId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ChatSession>()
-                .HasOne(cs => cs.Course)
-                .WithMany(c => c.ChatSessions)
-                .HasForeignKey(cs => cs.CourseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // ChatMessage
-            modelBuilder.Entity<ChatMessage>()
-                .HasOne(cm => cm.Session)
-                .WithMany(cs => cs.Messages)
-                .HasForeignKey(cm => cm.SessionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ChatMessage>()
-                .HasOne(cm => cm.SenderUser)
-                .WithMany(u => u.SentMessages)
-                .HasForeignKey(cm => cm.SenderUserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             // FAQTracker
             modelBuilder.Entity<FAQTracker>()
                 .HasOne(f => f.Course)
@@ -272,6 +276,36 @@ namespace StudyBuddy.Data
             modelBuilder.Entity<AnalyticsSnapshot>()
                 .HasIndex(a => a.SnapshotDate)
                 .IsUnique();
+
+            // PasswordResetToken unique constraint
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(prt => prt.ResetToken)
+                .IsUnique();
+
+            // === DECIMAL PRECISION CONFIGURATIONS ===
+            // Configure PercentageScore to use appropriate precision and scale
+            modelBuilder.Entity<QuizAttempt>()
+                .Property(qa => qa.PercentageScore)
+                .HasPrecision(5, 2); // 5 total digits, 2 decimal places (e.g., 100.00)
+
+            // Configure AnalyticsSnapshot decimal properties
+            modelBuilder.Entity<AnalyticsSnapshot>()
+                .Property(a => a.AverageCompletionRate)
+                .HasPrecision(5, 2); // 5 total digits, 2 decimal places
+
+            // Configure Course decimal properties
+            modelBuilder.Entity<Course>()
+                .Property(c => c.AverageRating)
+                .HasPrecision(3, 2); // 3 total digits, 2 decimal places (e.g., 4.95)
+
+            modelBuilder.Entity<Course>()
+                .Property(c => c.DurationHours)
+                .HasPrecision(6, 2); // 6 total digits, 2 decimal places (e.g., 120.50)
+
+            // Configure Enrollment decimal properties
+            modelBuilder.Entity<Enrollment>()
+                .Property(e => e.ProgressPercentage)
+                .HasPrecision(5, 2); // 5 total digits, 2 decimal places (e.g., 85.75)
         }
     }
 }

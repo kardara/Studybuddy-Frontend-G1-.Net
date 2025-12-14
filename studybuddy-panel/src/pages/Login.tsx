@@ -39,8 +39,10 @@ export default function Login() {
             } else {
                 navigate('/student'); // Default
             }
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.message || 'Invalid email or password';
+        } catch (err) {
+            const errorMessage = err && typeof err === 'object' && err.response?.data?.message
+                ? err.response.data.message
+                : 'Invalid email or password';
             setError(errorMessage);
             toast({
                 variant: "destructive",
@@ -127,6 +129,12 @@ export default function Login() {
                             )}
                         </button>
                     </form>
+
+                    <div className="mt-4 text-center">
+                        <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                            Forgot your password?
+                        </Link>
+                    </div>
 
                     <div className="mt-6 text-center text-sm">
                         <span className="text-muted-foreground">Don't have an account? </span>

@@ -9,10 +9,12 @@ namespace StudyBuddy.Services.Implementations
     public class CertificateService : ICertificateService
     {
         private readonly AppDbContext _context;
+        private readonly IPdfGenerator _pdfGenerator;
 
-        public CertificateService(AppDbContext context)
+        public CertificateService(AppDbContext context, IPdfGenerator pdfGenerator)
         {
             _context = context;
+            _pdfGenerator = pdfGenerator;
         }
 
         public async Task<CertificateDto?> IssueCertificateAsync(int studentId, int courseId)
@@ -111,6 +113,26 @@ namespace StudyBuddy.Services.Implementations
                 IssuedAt = certificate.IssuedAt,
                 CertificateUrl = certificate.CertificateUrl
             };
+        }
+
+        public async Task<byte[]> DownloadCertificatePdfAsync(int certificateId, int studentId)
+        {
+            var certificate = await _context.Certificates
+                .Include(c => c.Student)
+                .Include(c => c.Course)
+                .FirstOrDefaultAsync(c => c.CertificateId == certificateId && c.StudentId == studentId);
+
+            if (certificate == null)
+                throw new InvalidOperationException("Certificate not found or access denied");
+
+            var studentName = $"{certificate.Student.FirstName} {certificate.Student.LastName}";
+            var courseName = certificate.Course.Title;
+
+            return await _pdfGenerator.GenerateCertificatePdfAsync(
+                studentName,
+                courseName,
+                certificate.CertificateNumber,
+                certificate.IssuedAt);
         }
     }
 }

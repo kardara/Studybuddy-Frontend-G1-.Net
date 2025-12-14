@@ -31,7 +31,6 @@ namespace StudyBuddy.Core.Models.Domain
         public ICollection<Enrollment> Enrollments { get; set; } = new List<Enrollment>();
         public ICollection<Quiz> Quizzes { get; set; } = new List<Quiz>();
         public ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();
-        public ICollection<ChatSession> ChatSessions { get; set; } = new List<ChatSession>();
         public ICollection<StudentProgress> StudentProgresses { get; set; } = new List<StudentProgress>();
         public ICollection<QuizAttempt> QuizAttempts { get; set; } = new List<QuizAttempt>();
         public ICollection<FAQTracker> FAQs { get; set; } = new List<FAQTracker>();

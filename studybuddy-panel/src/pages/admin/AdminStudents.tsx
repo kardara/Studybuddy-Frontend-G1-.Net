@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -8,281 +8,686 @@ import {
   RotateCcw,
   Award,
   X,
+  Plus,
+  Edit,
+  Trash2,
+  Shield,
+  UserCheck,
+  UserX,
+  Check,
+  Loader2,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  ChevronDown,
 } from "lucide-react";
-import { ProgressBar } from "@/components/dashboard/ProgressBar";
+import { useToast } from "@/hooks/use-toast";
 
-interface Student {
-  id: string;
-  name: string;
+interface StudentUser {
+  userId: number;
   email: string;
-  enrolledCourses: number;
-  completedCourses: number;
-  avgProgress: number;
-  certificates: number;
-  joinedDate: string;
-  status: "active" | "inactive";
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  role: string;
+  isActive: boolean;
+  isBlocked: boolean;
+  blockReason?: string;
+  createdAt: string;
+  lastLoginAt?: string;
+  totalEnrollments?: number;
+  completedCourses?: number;
+  totalQuizAttempts?: number;
+  certificatesEarned?: number;
 }
 
-const students: Student[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@email.com",
-    enrolledCourses: 5,
-    completedCourses: 3,
-    avgProgress: 72,
-    certificates: 3,
-    joinedDate: "Jan 15, 2025",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Sarah Smith",
-    email: "sarah.smith@email.com",
-    enrolledCourses: 8,
-    completedCourses: 6,
-    avgProgress: 89,
-    certificates: 6,
-    joinedDate: "Feb 20, 2025",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Michael Johnson",
-    email: "m.johnson@email.com",
-    enrolledCourses: 3,
-    completedCourses: 1,
-    avgProgress: 45,
-    certificates: 1,
-    joinedDate: "Mar 10, 2025",
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Emily Brown",
-    email: "emily.b@email.com",
-    enrolledCourses: 4,
-    completedCourses: 4,
-    avgProgress: 100,
-    certificates: 4,
-    joinedDate: "Nov 5, 2024",
-    status: "inactive",
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "d.wilson@email.com",
-    enrolledCourses: 6,
-    completedCourses: 2,
-    avgProgress: 38,
-    certificates: 2,
-    joinedDate: "Apr 1, 2025",
-    status: "active",
-  },
-];
+interface Permission {
+  permissionId: number;
+  permissionName: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+interface BlockModalData {
+  show: boolean;
+  studentId?: number;
+  studentName?: string;
+  currentReason?: string;
+}
+
+interface PermissionModalData {
+  show: boolean;
+  studentId?: number;
+  studentName?: string;
+}
 
 export default function AdminStudents() {
+  const [students, setStudents] = useState<StudentUser[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<StudentUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "blocked">(
+    "all"
+  );
+  const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
+  const [blockModal, setBlockModal] = useState<BlockModalData>({ show: false });
+  const [permissionModal, setPermissionModal] = useState<PermissionModalData>({
+    show: false,
+  });
+  const [blockReason, setBlockReason] = useState("");
+  const [availablePermissions, setAvailablePermissions] = useState<Permission[]>(
+    []
+  );
+  const [studentPermissions, setStudentPermissions] = useState<Permission[]>([]);
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  // Load students on mount
+  useEffect(() => {
+    fetchStudents();
+    fetchAvailablePermissions();
+  }, []);
+
+  // Filter students when search or filter changes
+  useEffect(() => {
+    applyFilters();
+  }, [searchTerm, filterStatus, students]);
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/v1/admin/users?role=Student&pageSize=100", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+      const data = await response.json();
+
+      if (response.ok && data.users) {
+        setStudents(data.users);
+      } else {
+        throw new Error(data.message || "Failed to fetch students");
+      }
+    } catch (error) {
+      console.error("Error fetching students:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load students",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAvailablePermissions = async () => {
+    try {
+      const response = await fetch("/api/v1/permissions/list", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setAvailablePermissions(data);
+      }
+    } catch (error) {
+      console.error("Error fetching permissions:", error);
+    }
+  };
+
+  const fetchStudentPermissions = async (studentId: number) => {
+    try {
+      const response = await fetch(`/api/v1/admin/users/${studentId}/permissions`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setStudentPermissions(data.permissions || []);
+        setSelectedPermissions(data.permissions?.map((p: Permission) => p.permissionId) || []);
+      }
+    } catch (error) {
+      console.error("Error fetching student permissions:", error);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = students.filter((student) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        student.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        filterStatus === "all" ||
+        (filterStatus === "active" && !student.isBlocked) ||
+        (filterStatus === "blocked" && student.isBlocked);
+
+      return matchesSearch && matchesStatus;
+    });
+
+    setFilteredStudents(filtered);
+  };
+
+  const handleBlockStudent = async () => {
+    if (!blockModal.studentId || !blockReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a reason for blocking",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(
+        `/api/v1/admin/users/${blockModal.studentId}/block`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ blockReason }),
+        }
+      );
+
+      if (response.ok) {
+        setStudents(
+          students.map((s) =>
+            s.userId === blockModal.studentId
+              ? { ...s, isBlocked: true, blockReason }
+              : s
+          )
+        );
+        setBlockModal({ show: false });
+        setBlockReason("");
+        toast({
+          title: "Success",
+          description: "Student has been blocked",
+        });
+      } else {
+        throw new Error("Failed to block student");
+      }
+    } catch (error) {
+      console.error("Error blocking student:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to block student",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleUnblockStudent = async (studentId: number) => {
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/v1/admin/users/${studentId}/unblock`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        setStudents(
+          students.map((s) =>
+            s.userId === studentId ? { ...s, isBlocked: false, blockReason: undefined } : s
+          )
+        );
+        toast({
+          title: "Success",
+          description: "Student has been unblocked",
+        });
+      } else {
+        throw new Error("Failed to unblock student");
+      }
+    } catch (error) {
+      console.error("Error unblocking student:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to unblock student",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: number) => {
+    if (!confirm("Are you sure you want to delete this student? This action cannot be undone.")) {
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/v1/admin/users/${studentId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      if (response.ok) {
+        setStudents(students.filter((s) => s.userId !== studentId));
+        toast({
+          title: "Success",
+          description: "Student has been deleted",
+        });
+      } else {
+        throw new Error("Failed to delete student");
+      }
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete student",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenPermissionsModal = async (student: StudentUser) => {
+    await fetchStudentPermissions(student.userId);
+    setPermissionModal({
+      show: true,
+      studentId: student.userId,
+      studentName: `${student.firstName} ${student.lastName}`,
+    });
+  };
+
+  const handleSavePermissions = async () => {
+    if (!permissionModal.studentId) return;
+
+    setSubmitting(true);
+    try {
+      // Get current permissions
+      const currentPermIds = studentPermissions.map((p) => p.permissionId);
+
+      // Find permissions to add and remove
+      const toAdd = selectedPermissions.filter((id) => !currentPermIds.includes(id));
+      const toRemove = currentPermIds.filter((id) => !selectedPermissions.includes(id));
+
+      // Grant new permissions
+      for (const permId of toAdd) {
+        await fetch("/api/v1/permissions/grant", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: permissionModal.studentId,
+            permissionId: permId,
+          }),
+        });
+      }
+
+      // Revoke removed permissions
+      for (const permId of toRemove) {
+        await fetch(
+          `/api/v1/permissions/user/${permissionModal.studentId}/permission/${permId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+          }
+        );
+      }
+
+      toast({
+        title: "Success",
+        description: "Permissions updated successfully",
+      });
+      setPermissionModal({ show: false });
+      await fetchStudents();
+    } catch (error) {
+      console.error("Error updating permissions:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update permissions",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="animate-fade-in">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Manage Students</h1>
-          <p className="text-muted-foreground mt-1">
-            View and manage student progress and activities
-          </p>
-        </div>
-        <button className="btn-outline">
-          <Filter className="w-4 h-4" />
-          Export Data
-        </button>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Student Management</h1>
       </div>
 
-      {/* Search & Filters */}
-      <div className="dashboard-card p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      {/* Filters */}
+      <div className="flex gap-4 flex-wrap">
+        <div className="flex-1 min-w-[250px]">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 text-muted-foreground w-4 h-4" />
             <input
               type="text"
-              placeholder="Search by name or email..."
+              placeholder="Search students by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-          <div className="flex gap-2">
-            <select className="input-field w-auto">
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Inactive</option>
-            </select>
-            <select className="input-field w-auto">
-              <option>All Courses</option>
-              <option>React Fundamentals</option>
-              <option>Python for Data Science</option>
-            </select>
+        </div>
+
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as any)}
+          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="all">All Students</option>
+          <option value="active">Active</option>
+          <option value="blocked">Blocked</option>
+        </select>
+      </div>
+
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-blue-50 p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">Total Students</div>
+          <div className="text-2xl font-bold">{students.length}</div>
+        </div>
+        <div className="bg-green-50 p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">Active</div>
+          <div className="text-2xl font-bold">{students.filter((s) => !s.isBlocked).length}</div>
+        </div>
+        <div className="bg-red-50 p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">Blocked</div>
+          <div className="text-2xl font-bold">{students.filter((s) => s.isBlocked).length}</div>
+        </div>
+        <div className="bg-purple-50 p-4 rounded-lg border">
+          <div className="text-sm text-muted-foreground">Avg Progress</div>
+          <div className="text-2xl font-bold">
+            {students.length > 0
+              ? Math.round(
+                students.reduce(
+                  (sum, s) => sum + ((s.totalEnrollments || 0) > 0 ? 50 : 0),
+                  0
+                ) / students.length
+              )
+              : 0}
+            %
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="dashboard-card overflow-hidden">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Enrolled</th>
-              <th>Completed</th>
-              <th>Progress</th>
-              <th>Certificates</th>
-              <th>Joined</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((student) => (
-              <tr key={student.id}>
-                <td>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary">
-                        {student.name.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{student.name}</p>
-                      <p className="text-sm text-muted-foreground">{student.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td>{student.enrolledCourses}</td>
-                <td>{student.completedCourses}</td>
-                <td className="w-40">
-                  <ProgressBar value={student.avgProgress} size="sm" />
-                </td>
-                <td>
-                  <span className="flex items-center gap-1">
-                    <Award className="w-4 h-4 text-warning" />
-                    {student.certificates}
-                  </span>
-                </td>
-                <td className="text-muted-foreground">{student.joinedDate}</td>
-                <td>
-                  <span
-                    className={`badge ${
-                      student.status === "active" ? "badge-success" : "badge-muted"
-                    }`}
-                  >
-                    {student.status}
-                  </span>
-                </td>
-                <td>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setSelectedStudent(student)}
-                      className="p-2 hover:bg-muted rounded-lg transition-colors"
-                      title="View Details"
-                    >
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <button
-                      className="p-2 hover:bg-muted rounded-lg transition-colors"
-                      title="Send Email"
-                    >
-                      <Mail className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <button
-                      className="p-2 hover:bg-muted rounded-lg transition-colors"
-                      title="Reset Progress"
-                    >
-                      <RotateCcw className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </div>
-                </td>
+      {/* Students Table */}
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-muted border-b">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-medium">Student</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Email</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Status</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Enrollments</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Certificates</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Joined</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+                  </td>
+                </tr>
+              ) : filteredStudents.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
+                    No students found
+                  </td>
+                </tr>
+              ) : (
+                filteredStudents.map((student) => (
+                  <tbody key={student.userId}>
+                    <tr className="hover:bg-muted/50">
+                      <td className="px-6 py-4">
+                        <div
+                          className="cursor-pointer flex items-center gap-2"
+                          onClick={() =>
+                            setExpandedStudent(
+                              expandedStudent === student.userId ? null : student.userId
+                            )
+                          }
+                        >
+                          <ChevronDown
+                            className={`w-4 h-4 transition ${expandedStudent === student.userId ? "rotate-180" : ""
+                              }`}
+                          />
+                          <div>
+                            <div className="font-medium">{`${student.firstName} ${student.lastName}`}</div>
+                            <div className="text-sm text-muted-foreground">{student.phoneNumber || "N/A"}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm">{student.email}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${student.isBlocked
+                            ? "bg-red-100 text-red-700"
+                            : student.isActive
+                              ? "bg-green-100 text-green-700"
+                              : "bg-yellow-100 text-yellow-700"
+                            }`}
+                        >
+                          {student.isBlocked
+                            ? "Blocked"
+                            : student.isActive
+                              ? "Active"
+                              : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">{student.totalEnrollments || 0}</td>
+                      <td className="px-6 py-4 text-sm">{student.certificatesEarned || 0}</td>
+                      <td className="px-6 py-4 text-sm">
+                        {new Date(student.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          {student.isBlocked ? (
+                            <button
+                              onClick={() => handleUnblockStudent(student.userId)}
+                              disabled={submitting}
+                              className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
+                              title="Unblock student"
+                            >
+                              <UserCheck className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                setBlockModal({
+                                  show: true,
+                                  studentId: student.userId,
+                                  studentName: `${student.firstName} ${student.lastName}`,
+                                })
+                              }
+                              className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                              title="Block student"
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleOpenPermissionsModal(student)}
+                            className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
+                            title="Manage permissions"
+                          >
+                            <Shield className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStudent(student.userId)}
+                            disabled={submitting}
+                            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                            title="Delete student"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between p-4 border-t border-border">
-          <p className="text-sm text-muted-foreground">
-            Showing 1-{students.length} of {students.length} students
-          </p>
-          <div className="flex gap-2">
-            <button className="btn-outline py-2 px-3">Previous</button>
-            <button className="btn-primary py-2 px-3">Next</button>
-          </div>
+                    {/* Expanded Details Row */}
+                    {expandedStudent === student.userId && (
+                      <tr className="bg-muted/30">
+                        <td colSpan={7} className="px-6 py-4">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Quiz Attempts</div>
+                              <div className="text-lg font-bold">{student.totalQuizAttempts || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Completed Courses</div>
+                              <div className="text-lg font-bold">{student.completedCourses || 0}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">Last Login</div>
+                              <div className="text-sm">
+                                {student.lastLoginAt
+                                  ? new Date(student.lastLoginAt).toLocaleDateString()
+                                  : "Never"}
+                              </div>
+                            </div>
+                            {student.isBlocked && (
+                              <div>
+                                <div className="text-xs text-muted-foreground">Block Reason</div>
+                                <div className="text-sm">{student.blockReason || "No reason provided"}</div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Student Detail Modal */}
-      {selectedStudent && (
-        <div className="modal-overlay" onClick={() => setSelectedStudent(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-xl font-semibold">Student Details</h2>
+      {/* Block Student Modal */}
+      {blockModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Block Student</h2>
               <button
-                onClick={() => setSelectedStudent(null)}
-                className="p-2 hover:bg-muted rounded-lg transition-colors"
+                onClick={() => setBlockModal({ show: false })}
+                className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6">
-              {/* Profile Header */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <span className="text-2xl font-semibold text-primary">
-                    {selectedStudent.name.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold">{selectedStudent.name}</h3>
-                  <p className="text-muted-foreground">{selectedStudent.email}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Joined {selectedStudent.joinedDate}
-                  </p>
-                </div>
-              </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Block {blockModal.studentName}
+            </p>
 
-              {/* Stats */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Enrolled Courses</p>
-                  <p className="text-2xl font-semibold">{selectedStudent.enrolledCourses}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Completed</p>
-                  <p className="text-2xl font-semibold">{selectedStudent.completedCourses}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Certificates</p>
-                  <p className="text-2xl font-semibold">{selectedStudent.certificates}</p>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Avg Progress</p>
-                  <p className="text-2xl font-semibold">{selectedStudent.avgProgress}%</p>
-                </div>
-              </div>
+            <textarea
+              placeholder="Enter reason for blocking..."
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mb-4"
+              rows={4}
+            />
 
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button className="btn-outline flex-1">
-                  <Mail className="w-4 h-4" />
-                  Send Message
-                </button>
-                <button className="btn-primary flex-1">
-                  <Award className="w-4 h-4" />
-                  View Certificates
-                </button>
-              </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBlockModal({ show: false })}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBlockStudent}
+                disabled={submitting || !blockReason.trim()}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Block"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Permissions Modal */}
+      {permissionModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Manage Permissions</h2>
+              <button
+                onClick={() => setPermissionModal({ show: false })}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Configure permissions for {permissionModal.studentName}
+            </p>
+
+            <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto">
+              {availablePermissions.map((perm) => (
+                <label key={perm.permissionId} className="flex items-start gap-3 p-2 hover:bg-muted rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={selectedPermissions.includes(perm.permissionId)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedPermissions([...selectedPermissions, perm.permissionId]);
+                      } else {
+                        setSelectedPermissions(
+                          selectedPermissions.filter((id) => id !== perm.permissionId)
+                        );
+                      }
+                    }}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-sm">{perm.permissionName}</div>
+                    {perm.description && (
+                      <div className="text-xs text-muted-foreground">{perm.description}</div>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPermissionModal({ show: false })}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSavePermissions}
+                disabled={submitting}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:bg-primary/50"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Save"}
+              </button>
             </div>
           </div>
         </div>

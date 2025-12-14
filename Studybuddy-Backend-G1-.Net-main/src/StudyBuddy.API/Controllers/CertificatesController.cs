@@ -57,5 +57,21 @@ namespace StudyBuddy.API.Controllers
 
             return Ok(certificate);
         }
+
+        [HttpGet("download/{certificateId}")]
+        public async Task<IActionResult> DownloadCertificate(int certificateId)
+        {
+            try
+            {
+                var studentId = GetCurrentUserId();
+                var pdfBytes = await _certificateService.DownloadCertificatePdfAsync(certificateId, studentId);
+                
+                return File(pdfBytes, "application/pdf", $"Certificate_{certificateId}.pdf");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
     }
 }

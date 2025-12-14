@@ -12,6 +12,7 @@ import {
   GraduationCap,
   ChevronLeft,
   Menu,
+  FolderTree,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -19,11 +20,11 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
   { icon: BookOpen, label: "Manage Courses", path: "/admin/courses" },
+  { icon: FolderTree, label: "Course Content", path: "/admin/course-content" },
   { icon: ClipboardList, label: "Manage Quizzes", path: "/admin/quizzes" },
   { icon: Users, label: "Manage Students", path: "/admin/students" },
   { icon: Award, label: "Certificates", path: "/admin/certificates" },
   { icon: BarChart3, label: "Reports & Analytics", path: "/admin/analytics" },
-  { icon: MessageSquare, label: "AI Chat Logs", path: "/admin/chat-logs" },
   { icon: Settings, label: "Settings", path: "/admin/settings" },
 ];
 
