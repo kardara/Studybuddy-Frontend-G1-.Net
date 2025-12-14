@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { coursesService } from "@/services/api/courses.service";
 import { progressService } from "@/services/api/progress.service";
+import { quizzesService } from "@/services/api/quizzes.service";
 import { ProgressBar } from "@/components/dashboard/ProgressBar";
 import { CourseDetailDto, ProgressResponse } from "@/lib/types";
 
@@ -53,31 +54,74 @@ export default function CourseDetail() {
 
     // Mark lesson complete mutation
     const markCompleteMutation = useMutation({
-      mutationFn: ({ lessonId, isCompleted }: { lessonId: number; isCompleted: boolean }) =>
-        progressService.updateProgress(lessonId, isCompleted),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['course-progress'] });
-        queryClient.invalidateQueries({ queryKey: ['my-progress'] });
-      },
-      onError: (error) => {
-        console.error("Error updating lesson progress:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to update lesson progress",
-        });
-      },
+        mutationFn: ({ lessonId, isCompleted }: { lessonId: number; isCompleted: boolean }) =>
+            progressService.updateProgress(lessonId, isCompleted),
+        onSuccess: (_, { lessonId, isCompleted }) => {
+            // Update the course data locally
+            queryClient.setQueryData(['course-detail', courseId], (oldData: any) => {
+                if (!oldData) return oldData;
+                const updatedData = { ...oldData };
+                updatedData.modules = updatedData.modules.map((module: any) => ({
+                    ...module,
+                    lessons: module.lessons.map((lesson: any) =>
+                        lesson.lessonId === lessonId ? { ...lesson, isCompleted } : lesson
+                    )
+                }));
+                return updatedData;
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['course-progress'] });
+            queryClient.invalidateQueries({ queryKey: ['my-progress'] });
+        },
+        onError: (error) => {
+            console.error("Error updating lesson progress:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to update lesson progress",
+            });
+        },
     });
 
     useEffect(() => {
-        if (course && course.modules.length > 0 && course.modules[0].lessons.length > 0) {
+        if (course && course.modules.length > 0 && course.modules[0].lessons.length > 0 && !currentLessonId) {
             const firstLesson = course.modules[0].lessons[0];
             setCurrentLessonId(firstLesson.lessonId);
         }
-    }, [course]);
+    }, [course, currentLessonId]);
 
     const handleLessonComplete = (lessonId: number, isCompleted: boolean) => {
         markCompleteMutation.mutate({ lessonId, isCompleted });
+    };
+
+    const handleTakeQuiz = async () => {
+        if (!courseId) return;
+
+        try {
+            toast({
+                title: "Loading Quiz",
+                description: "Finding quiz for this course...",
+            });
+
+            const quizzes = await quizzesService.getQuizzesByCourse(parseInt(courseId));
+            if (quizzes && quizzes.length > 0) {
+                const firstQuiz = quizzes[0];
+                navigate(`/student/quiz/${firstQuiz.quizId}?courseId=${courseId}`);
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "No Quiz Available",
+                    description: "No quiz is available for this course yet.",
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching quizzes:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to load quiz for this course. Please check your internet connection and try again.",
+            });
+        }
     };
 
     const getCurrentLesson = () => {
@@ -302,18 +346,26 @@ export default function CourseDetail() {
                 <div className="flex-1 p-6 overflow-y-auto">
                     {currentLesson ? (
                         <div className="max-w-4xl mx-auto space-y-6">
-                            {/* Video Player Placeholder */}
-                            <div className="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center border border-border">
+                            {/* Video Player */}
+                            <div className="aspect-video bg-black rounded-lg overflow-hidden border border-border">
                                 {currentLesson.videoUrl ? (
-                                    <div className="text-center">
-                                        <Play className="w-16 h-16 text-primary mx-auto mb-4" />
-                                        <p className="text-muted-foreground">Video Player</p>
-                                        <p className="text-sm text-muted-foreground mt-1">{currentLesson.videoUrl}</p>
-                                    </div>
+                                    <video
+                                        controls
+                                        className="w-full h-full"
+                                        poster="/api/placeholder/800/450"
+                                    >
+                                        <source src={currentLesson.videoUrl} type="video/mp4" />
+                                        <source src={currentLesson.videoUrl} type="video/webm" />
+                                        <source src={currentLesson.videoUrl} type="video/ogg" />
+                                        Your browser does not support the video tag.
+                                    </video>
                                 ) : (
-                                    <div className="text-center">
-                                        <BookOpen className="w-16 h-16 text-primary/50 mx-auto mb-4" />
-                                        <p className="text-muted-foreground">Reading Material</p>
+                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                                        <div className="text-center">
+                                            <BookOpen className="w-16 h-16 text-primary/50 mx-auto mb-4" />
+                                            <p className="text-muted-foreground">Reading Material</p>
+                                            <p className="text-sm text-muted-foreground mt-2">No video content available</p>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -390,9 +442,18 @@ export default function CourseDetail() {
                                             <SkipForward className="w-4 h-4" />
                                         </button>
                                     ) : (
-                                        <div className="text-center">
-                                            <p className="text-sm text-muted-foreground">Course Completed!</p>
-                                            <p className="font-medium">Congratulations! 🎉</p>
+                                        <div className="text-center space-y-4">
+                                            <div>
+                                                <p className="text-sm text-muted-foreground">Course Completed!</p>
+                                                <p className="font-medium">Congratulations! 🎉</p>
+                                            </div>
+                                            {/* TODO: Add Take Quiz button if course has quiz */}
+                                            <button
+                                                onClick={handleTakeQuiz}
+                                                className="btn-primary"
+                                            >
+                                                Take Quiz
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -412,3 +473,5 @@ export default function CourseDetail() {
         </div>
     );
 }
+
+

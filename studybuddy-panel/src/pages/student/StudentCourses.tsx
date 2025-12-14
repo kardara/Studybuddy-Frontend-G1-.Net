@@ -48,11 +48,8 @@ export default function StudentCourses() {
     queryFn: () => coursesService.getPublishedCourses(),
   });
 
-  // Fetch featured courses
-  const { data: featuredCourses } = useQuery({
-    queryKey: ['featured-courses'],
-    queryFn: () => enrollmentsService.getFeaturedCourses(),
-  });
+  // Featured courses - temporarily disabled until endpoint is implemented
+  const featuredCourses: CourseListDto[] = [];
 
   // Fetch progress for all courses
   const { data: progressData, refetch: refetchProgress } = useQuery({
@@ -399,8 +396,8 @@ export default function StudentCourses() {
           <button
             onClick={() => setViewMode("grid")}
             className={`p-2 rounded-lg transition-colors ${viewMode === "grid"
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted text-muted-foreground"
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-muted text-muted-foreground"
               }`}
           >
             <Grid3X3 className="w-4 h-4" />
@@ -408,8 +405,8 @@ export default function StudentCourses() {
           <button
             onClick={() => setViewMode("list")}
             className={`p-2 rounded-lg transition-colors ${viewMode === "list"
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted text-muted-foreground"
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-muted text-muted-foreground"
               }`}
           >
             <List className="w-4 h-4" />
@@ -422,8 +419,8 @@ export default function StudentCourses() {
         <button
           onClick={() => setActiveTab("my-courses")}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "my-courses"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
             }`}
         >
           My Courses ({enrollments?.length || 0})
@@ -431,8 +428,8 @@ export default function StudentCourses() {
         <button
           onClick={() => setActiveTab("browse")}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "browse"
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground"
             }`}
         >
           Browse Courses

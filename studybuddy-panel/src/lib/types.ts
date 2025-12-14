@@ -10,7 +10,7 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   fullName?: string;
-  role: string;
+  role?: string;
 }
 
 export interface AuthResponse {
@@ -115,7 +115,7 @@ export interface CreateQuizRequest {
 
 export interface CreateQuestionRequest {
   questionText: string;
-  questionType: "multiple_choice" | "true_false" | "short_answer";
+  questionType: "MultipleChoice";
   points: number;
   orderIndex: number;
   options: CreateQuestionOptionRequest[];
@@ -131,6 +131,7 @@ export interface UpdateQuizRequest {
   quizId: number;
   title: string;
   description?: string;
+  courseId?: number;
   passingScore: number;
   timeLimit?: number;
   maxAttempts?: number;
@@ -220,6 +221,8 @@ export interface QuestionDto {
 }
 
 export interface QuizDto {
+  isActive: boolean;
+  courseId: number;
   quizId: number;
   title: string;
   description?: string;
@@ -240,17 +243,31 @@ export interface QuizSubmissionRequest {
   answers: QuizAnswerDto[];
 }
 
+export interface QuestionResultDto {
+  questionId: number;
+  questionText: string;
+  studentAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  pointsEarned: number;
+  pointsTotal: number;
+}
+
 export interface QuizResultDto {
   attemptId: number;
   quizId: number;
   quizTitle: string;
-  score: number;
-  totalPoints: number;
-  percentage: number;
-  passed: boolean;
-  attemptNumber: number;
-  completedAt: string;
-  timeTaken?: number;
+  attemptedAt: string;
+  submittedAt: string;
+  totalScore: number;
+  maxScore: number;
+  percentageScore: number;
+  isPassed: boolean;
+  attemptsUsed: number;
+  maxAttempts: number;
+  canRetake: boolean;
+  certificateIssued?: boolean;
+  questionResults: QuestionResultDto[];
 }
 
 export interface QuizAttemptDto {

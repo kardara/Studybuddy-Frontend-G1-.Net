@@ -137,21 +137,6 @@ export default function AdminAnalytics() {
             </div>
           </div>
         </div>
-        <div className="stat-card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">AI Chat Sessions</p>
-              <p className="text-3xl font-semibold mt-1">{analytics?.totalChatSessions || 0}</p>
-              <div className="flex items-center gap-1 mt-2 text-success text-sm">
-                <TrendingUp className="w-4 h-4" />
-                +24.8%
-              </div>
-            </div>
-            <div className="p-3 bg-chart-4/20 rounded-lg">
-              <MessageSquare className="w-6 h-6 text-chart-4" />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Charts Row 1 */}
@@ -278,16 +263,6 @@ export default function AdminAnalytics() {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* AI Chat Usage */}
-      <div className="dashboard-card p-6 mt-6">
-        <h3 className="section-title">AI Chat Usage (This Week)</h3>
-        <div className="text-center py-12 text-muted-foreground">
-          <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>AI Chat analytics will be displayed here</p>
-          <p className="text-sm mt-2">Total sessions: {analytics?.totalChatSessions || 0}</p>
         </div>
       </div>
     </div>

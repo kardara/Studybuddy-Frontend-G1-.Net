@@ -71,12 +71,6 @@ export default function AdminSettings() {
             <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center">
               <User className="w-12 h-12 text-primary" />
             </div>
-            <div>
-              <button className="btn-outline mb-2">Upload Photo</button>
-              <p className="text-sm text-muted-foreground">
-                JPG, PNG or GIF. Max size 2MB.
-              </p>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">

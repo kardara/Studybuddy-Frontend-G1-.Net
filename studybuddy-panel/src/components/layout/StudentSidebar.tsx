@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/student" },
   { icon: BookOpen, label: "My Courses", path: "/student/courses" },
-  { icon: Play, label: "Continue Learning", path: "/student/continue" },
   { icon: ClipboardList, label: "Quizzes", path: "/student/quizzes" },
   { icon: Award, label: "Certificates", path: "/student/certificates" },
 ];
@@ -77,14 +76,6 @@ export function StudentSidebar() {
           );
         })}
       </nav>
-
-      {/* Logout */}
-      <div className="p-4 border-t border-sidebar-border">
-        <button className="sidebar-item w-full text-sidebar-muted hover:text-sidebar-foreground">
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!collapsed && <span className="text-sm font-medium">Logout</span>}
-        </button>
-      </div>
     </aside>
   );
 }

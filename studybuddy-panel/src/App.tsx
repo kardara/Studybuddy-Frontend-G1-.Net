@@ -15,6 +15,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 // Admin Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCourses from "./pages/admin/AdminCourses";
 import CourseContentManager from "./pages/admin/CourseContentManager";
 import AdminQuizzes from "./pages/admin/AdminQuizzes";
@@ -55,7 +56,7 @@ const App = () => (
                 <AdminLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<AdminCourses />} />
+              <Route index element={<AdminDashboard />} />
               <Route path="courses" element={<AdminCourses />} />
               <Route path="course-content" element={<CourseContentManager />} />
               <Route path="quizzes" element={<AdminQuizzes />} />

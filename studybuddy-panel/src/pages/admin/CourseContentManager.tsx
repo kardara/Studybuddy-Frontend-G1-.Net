@@ -11,6 +11,7 @@ import {
     CheckCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient } from "@/lib/api.config";
 
 interface Course {
     courseId: number;
@@ -100,17 +101,10 @@ export default function CourseContentManager() {
     const fetchCourses = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await fetch("/api/v1/courses/admin/all", {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-                },
-            });
-            const data = await response.json();
-            if (response.ok) {
-                setCourses(data);
-                if (data.length > 0) {
-                    setSelectedCourse(data[0]);
-                }
+            const data = await apiClient.get("courses/admin/all");
+            setCourses(data.data);
+            if (data.data.length > 0) {
+                setSelectedCourse(data.data[0]);
             }
         } catch (error) {
             console.error("Error fetching courses:", error);
@@ -131,15 +125,8 @@ export default function CourseContentManager() {
     const fetchModules = async (courseId: number) => {
         try {
             setLoading(true);
-            const response = await fetch(`/api/v1/courses/${courseId}/modules`, {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-                },
-            });
-            const data = await response.json();
-            if (response.ok) {
-                setModules(data || []);
-            }
+            const data = await apiClient.get(`courses/${courseId}/modules`);
+            setModules(data.data || []);
         } catch (error) {
             console.error("Error fetching modules:", error);
         } finally {
@@ -186,37 +173,26 @@ export default function CourseContentManager() {
 
         setSubmitting(true);
         try {
-            const url = modal.data
-                ? `/api/v1/courses/${selectedCourse.courseId}/modules/${modal.data.moduleId}`
-                : `/api/v1/courses/${selectedCourse.courseId}/modules`;
+            const data = {
+                title: moduleForm.title,
+                description: moduleForm.description,
+                estimatedDurationMinutes: moduleForm.estimatedDurationMinutes
+                    ? parseInt(moduleForm.estimatedDurationMinutes)
+                    : null,
+            };
 
-            const method = modal.data ? "PUT" : "POST";
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    title: moduleForm.title,
-                    description: moduleForm.description,
-                    estimatedDurationMinutes: moduleForm.estimatedDurationMinutes
-                        ? parseInt(moduleForm.estimatedDurationMinutes)
-                        : null,
-                }),
-            });
-
-            if (response.ok) {
-                toast({
-                    title: "Success",
-                    description: modal.data ? "Module updated" : "Module created",
-                });
-                setModal({ show: false, type: null });
-                await fetchModules(selectedCourse.courseId);
+            if (modal.data) {
+                await apiClient.put(`courses/${selectedCourse.courseId}/modules/${modal.data.moduleId}`, data);
             } else {
-                throw new Error("Failed to save module");
+                await apiClient.post(`courses/${selectedCourse.courseId}/modules`, data);
             }
+
+            toast({
+                title: "Success",
+                description: modal.data ? "Module updated" : "Module created",
+            });
+            setModal({ show: false, type: null });
+            await fetchModules(selectedCourse.courseId);
         } catch (error) {
             console.error("Error saving module:", error);
             toast({
@@ -234,23 +210,13 @@ export default function CourseContentManager() {
 
         setSubmitting(true);
         try {
-            const response = await fetch(
-                `/api/v1/courses/${selectedCourse?.courseId}/modules/${moduleId}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-                    },
-                }
-            );
+            await apiClient.delete(`courses/${selectedCourse?.courseId}/modules/${moduleId}`);
 
-            if (response.ok) {
-                toast({
-                    title: "Success",
-                    description: "Module deleted",
-                });
-                await fetchModules(selectedCourse!.courseId);
-            }
+            toast({
+                title: "Success",
+                description: "Module deleted",
+            });
+            await fetchModules(selectedCourse!.courseId);
         } catch (error) {
             console.error("Error deleting module:", error);
             toast({
@@ -309,37 +275,28 @@ export default function CourseContentManager() {
 
         setSubmitting(true);
         try {
-            const url = modal.data
-                ? `/api/v1/courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons/${(modal.data as Lesson).lessonId}`
-                : `/api/v1/courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons`;
+            const data = {
+                title: lessonForm.title,
+                content: lessonForm.content,
+                contentType: lessonForm.contentType,
+                videoUrl: lessonForm.videoUrl,
+                estimatedDurationMinutes: lessonForm.estimatedDurationMinutes
+                    ? parseInt(lessonForm.estimatedDurationMinutes)
+                    : null,
+            };
 
-            const method = modal.data ? "PUT" : "POST";
-
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    title: lessonForm.title,
-                    content: lessonForm.content,
-                    contentType: lessonForm.contentType,
-                    videoUrl: lessonForm.videoUrl,
-                    estimatedDurationMinutes: lessonForm.estimatedDurationMinutes
-                        ? parseInt(lessonForm.estimatedDurationMinutes)
-                        : null,
-                }),
-            });
-
-            if (response.ok) {
-                toast({
-                    title: "Success",
-                    description: modal.data ? "Lesson updated" : "Lesson created",
-                });
-                setModal({ show: false, type: null });
-                await fetchModules(selectedCourse!.courseId);
+            if (modal.data) {
+                await apiClient.put(`courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons/${(modal.data as Lesson).lessonId}`, data);
+            } else {
+                await apiClient.post(`courses/${selectedCourse?.courseId}/modules/${modal.moduleId}/lessons`, data);
             }
+
+            toast({
+                title: "Success",
+                description: modal.data ? "Lesson updated" : "Lesson created",
+            });
+            setModal({ show: false, type: null });
+            await fetchModules(selectedCourse!.courseId);
         } catch (error) {
             console.error("Error saving lesson:", error);
             toast({
@@ -357,23 +314,13 @@ export default function CourseContentManager() {
 
         setSubmitting(true);
         try {
-            const response = await fetch(
-                `/api/v1/courses/${selectedCourse?.courseId}/modules/${moduleId}/lessons/${lessonId}`,
-                {
-                    method: "DELETE",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-                    },
-                }
-            );
+            await apiClient.delete(`courses/${selectedCourse?.courseId}/modules/${moduleId}/lessons/${lessonId}`);
 
-            if (response.ok) {
-                toast({
-                    title: "Success",
-                    description: "Lesson deleted",
-                });
-                await fetchModules(selectedCourse!.courseId);
-            }
+            toast({
+                title: "Success",
+                description: "Lesson deleted",
+            });
+            await fetchModules(selectedCourse!.courseId);
         } catch (error) {
             console.error("Error deleting lesson:", error);
             toast({

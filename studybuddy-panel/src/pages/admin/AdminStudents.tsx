@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -22,6 +22,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiClient } from "@/lib/api.config";
 
 interface StudentUser {
   userId: number;
@@ -97,17 +98,11 @@ export default function AdminStudents() {
   const fetchStudents = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/v1/admin/users?role=Student&pageSize=100", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      const data = await response.json();
-
-      if (response.ok && data.users) {
-        setStudents(data.users);
+      const response = await apiClient.get("admin/users?role=Student&pageSize=100");
+      if (response.data.users) {
+        setStudents(response.data.users);
       } else {
-        throw new Error(data.message || "Failed to fetch students");
+        throw new Error("Failed to fetch students");
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -123,15 +118,8 @@ export default function AdminStudents() {
 
   const fetchAvailablePermissions = async () => {
     try {
-      const response = await fetch("/api/v1/permissions/list", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setAvailablePermissions(data);
-      }
+      const response = await apiClient.get("permissions/list");
+      setAvailablePermissions(response.data);
     } catch (error) {
       console.error("Error fetching permissions:", error);
     }
@@ -139,16 +127,9 @@ export default function AdminStudents() {
 
   const fetchStudentPermissions = async (studentId: number) => {
     try {
-      const response = await fetch(`/api/v1/admin/users/${studentId}/permissions`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setStudentPermissions(data.permissions || []);
-        setSelectedPermissions(data.permissions?.map((p: Permission) => p.permissionId) || []);
-      }
+      const response = await apiClient.get(`admin/users/${studentId}/permissions`);
+      setStudentPermissions(response.data.permissions || []);
+      setSelectedPermissions(response.data.permissions?.map((p: Permission) => p.permissionId) || []);
     } catch (error) {
       console.error("Error fetching student permissions:", error);
     }
@@ -185,35 +166,21 @@ export default function AdminStudents() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(
-        `/api/v1/admin/users/${blockModal.studentId}/block`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ blockReason }),
-        }
-      );
+      await apiClient.put(`admin/users/${blockModal.studentId}/block`, { blockReason });
 
-      if (response.ok) {
-        setStudents(
-          students.map((s) =>
-            s.userId === blockModal.studentId
-              ? { ...s, isBlocked: true, blockReason }
-              : s
-          )
-        );
-        setBlockModal({ show: false });
-        setBlockReason("");
-        toast({
-          title: "Success",
-          description: "Student has been blocked",
-        });
-      } else {
-        throw new Error("Failed to block student");
-      }
+      setStudents(
+        students.map((s) =>
+          s.userId === blockModal.studentId
+            ? { ...s, isBlocked: true, blockReason }
+            : s
+        )
+      );
+      setBlockModal({ show: false });
+      setBlockReason("");
+      toast({
+        title: "Success",
+        description: "Student has been blocked",
+      });
     } catch (error) {
       console.error("Error blocking student:", error);
       toast({
@@ -229,27 +196,17 @@ export default function AdminStudents() {
   const handleUnblockStudent = async (studentId: number) => {
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/v1/admin/users/${studentId}/unblock`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          "Content-Type": "application/json",
-        },
-      });
+      await apiClient.put(`admin/users/${studentId}/unblock`);
 
-      if (response.ok) {
-        setStudents(
-          students.map((s) =>
-            s.userId === studentId ? { ...s, isBlocked: false, blockReason: undefined } : s
-          )
-        );
-        toast({
-          title: "Success",
-          description: "Student has been unblocked",
-        });
-      } else {
-        throw new Error("Failed to unblock student");
-      }
+      setStudents(
+        students.map((s) =>
+          s.userId === studentId ? { ...s, isBlocked: false, blockReason: undefined } : s
+        )
+      );
+      toast({
+        title: "Success",
+        description: "Student has been unblocked",
+      });
     } catch (error) {
       console.error("Error unblocking student:", error);
       toast({
@@ -269,22 +226,13 @@ export default function AdminStudents() {
 
     setSubmitting(true);
     try {
-      const response = await fetch(`/api/v1/admin/users/${studentId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
+      await apiClient.delete(`admin/users/${studentId}`);
 
-      if (response.ok) {
-        setStudents(students.filter((s) => s.userId !== studentId));
-        toast({
-          title: "Success",
-          description: "Student has been deleted",
-        });
-      } else {
-        throw new Error("Failed to delete student");
-      }
+      setStudents(students.filter((s) => s.userId !== studentId));
+      toast({
+        title: "Success",
+        description: "Student has been deleted",
+      });
     } catch (error) {
       console.error("Error deleting student:", error);
       toast({
@@ -320,30 +268,15 @@ export default function AdminStudents() {
 
       // Grant new permissions
       for (const permId of toAdd) {
-        await fetch("/api/v1/permissions/grant", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: permissionModal.studentId,
-            permissionId: permId,
-          }),
+        await apiClient.post("permissions/grant", {
+          userId: permissionModal.studentId,
+          permissionId: permId,
         });
       }
 
       // Revoke removed permissions
       for (const permId of toRemove) {
-        await fetch(
-          `/api/v1/permissions/user/${permissionModal.studentId}/permission/${permId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-            },
-          }
-        );
+        await apiClient.delete(`permissions/user/${permissionModal.studentId}/permission/${permId}`);
       }
 
       toast({
@@ -456,128 +389,134 @@ export default function AdminStudents() {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => (
-                  <tbody key={student.userId}>
-                    <tr className="hover:bg-muted/50">
-                      <td className="px-6 py-4">
-                        <div
-                          className="cursor-pointer flex items-center gap-2"
-                          onClick={() =>
-                            setExpandedStudent(
-                              expandedStudent === student.userId ? null : student.userId
-                            )
-                          }
-                        >
-                          <ChevronDown
-                            className={`w-4 h-4 transition ${expandedStudent === student.userId ? "rotate-180" : ""
-                              }`}
-                          />
-                          <div>
-                            <div className="font-medium">{`${student.firstName} ${student.lastName}`}</div>
-                            <div className="text-sm text-muted-foreground">{student.phoneNumber || "N/A"}</div>
+                <>
+                  {filteredStudents.map((student) => (
+                    <React.Fragment key={student.userId}>
+                      {/* Main Row */}
+                      <tr className="hover:bg-muted/50">
+                        <td className="px-6 py-4">
+                          <div
+                            className="cursor-pointer flex items-center gap-2"
+                            onClick={() =>
+                              setExpandedStudent(
+                                expandedStudent === student.userId ? null : student.userId
+                              )
+                            }
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform ${expandedStudent === student.userId ? "rotate-180" : ""
+                                }`}
+                            />
+                            <div>
+                              <div className="font-medium">{`${student.firstName} ${student.lastName}`}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {student.phoneNumber || "N/A"}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm">{student.email}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${student.isBlocked
-                            ? "bg-red-100 text-red-700"
-                            : student.isActive
-                              ? "bg-green-100 text-green-700"
-                              : "bg-yellow-100 text-yellow-700"
-                            }`}
-                        >
-                          {student.isBlocked
-                            ? "Blocked"
-                            : student.isActive
-                              ? "Active"
-                              : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">{student.totalEnrollments || 0}</td>
-                      <td className="px-6 py-4 text-sm">{student.certificatesEarned || 0}</td>
-                      <td className="px-6 py-4 text-sm">
-                        {new Date(student.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          {student.isBlocked ? (
-                            <button
-                              onClick={() => handleUnblockStudent(student.userId)}
-                              disabled={submitting}
-                              className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
-                              title="Unblock student"
-                            >
-                              <UserCheck className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() =>
-                                setBlockModal({
-                                  show: true,
-                                  studentId: student.userId,
-                                  studentName: `${student.firstName} ${student.lastName}`,
-                                })
-                              }
-                              className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                              title="Block student"
-                            >
-                              <UserX className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleOpenPermissionsModal(student)}
-                            className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
-                            title="Manage permissions"
+                        </td>
+                        <td className="px-6 py-4 text-sm">{student.email}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${student.isBlocked
+                                ? "bg-red-100 text-red-700"
+                                : student.isActive
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                              }`}
                           >
-                            <Shield className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteStudent(student.userId)}
-                            disabled={submitting}
-                            className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                            title="Delete student"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* Expanded Details Row */}
-                    {expandedStudent === student.userId && (
-                      <tr className="bg-muted/30">
-                        <td colSpan={7} className="px-6 py-4">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Quiz Attempts</div>
-                              <div className="text-lg font-bold">{student.totalQuizAttempts || 0}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Completed Courses</div>
-                              <div className="text-lg font-bold">{student.completedCourses || 0}</div>
-                            </div>
-                            <div>
-                              <div className="text-xs text-muted-foreground">Last Login</div>
-                              <div className="text-sm">
-                                {student.lastLoginAt
-                                  ? new Date(student.lastLoginAt).toLocaleDateString()
-                                  : "Never"}
-                              </div>
-                            </div>
-                            {student.isBlocked && (
-                              <div>
-                                <div className="text-xs text-muted-foreground">Block Reason</div>
-                                <div className="text-sm">{student.blockReason || "No reason provided"}</div>
-                              </div>
+                            {student.isBlocked
+                              ? "Blocked"
+                              : student.isActive
+                                ? "Active"
+                                : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm">{student.totalEnrollments || 0}</td>
+                        <td className="px-6 py-4 text-sm">{student.certificatesEarned || 0}</td>
+                        <td className="px-6 py-4 text-sm">
+                          {new Date(student.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {student.isBlocked ? (
+                              <button
+                                onClick={() => handleUnblockStudent(student.userId)}
+                                disabled={submitting}
+                                className="p-2 hover:bg-green-100 rounded-lg transition-colors text-green-600"
+                                title="Unblock student"
+                              >
+                                <UserCheck className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  setBlockModal({
+                                    show: true,
+                                    studentId: student.userId,
+                                    studentName: `${student.firstName} ${student.lastName}`,
+                                    currentReason: student.blockReason,
+                                  })
+                                }
+                                className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                                title="Block student"
+                              >
+                                <UserX className="w-4 h-4" />
+                              </button>
                             )}
+                            <button
+                              onClick={() => handleOpenPermissionsModal(student)}
+                              className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
+                              title="Manage permissions"
+                            >
+                              <Shield className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStudent(student.userId)}
+                              disabled={submitting}
+                              className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                              title="Delete student"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                ))
+
+                      {/* Expanded Details Row */}
+                      {expandedStudent === student.userId && (
+                        <tr className="bg-muted/30">
+                          <td colSpan={7} className="px-6 py-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                              <div>
+                                <div className="text-xs text-muted-foreground">Quiz Attempts</div>
+                                <div className="text-lg font-bold">{student.totalQuizAttempts || 0}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground">Completed Courses</div>
+                                <div className="text-lg font-bold">{student.completedCourses || 0}</div>
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground">Last Login</div>
+                                <div className="text-sm">
+                                  {student.lastLoginAt
+                                    ? new Date(student.lastLoginAt).toLocaleDateString()
+                                    : "Never"}
+                                </div>
+                              </div>
+                              {student.isBlocked && student.blockReason && (
+                                <div>
+                                  <div className="text-xs text-muted-foreground">Block Reason</div>
+                                  <div className="text-sm text-red-600">{student.blockReason}</div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </>
               )}
             </tbody>
           </table>

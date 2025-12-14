@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
   Clock,
   AlertCircle,
@@ -9,6 +10,8 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { certificatesService } from "@/services/api/certificates.service";
+import { apiClient } from "@/lib/api.config";
 
 interface QuestionOption {
   optionId: number;
@@ -59,10 +62,18 @@ interface StudentAnswer {
 
 interface QuizResult {
   attemptId: number;
+  quizId: number;
+  quizTitle: string;
+  attemptedAt: string;
+  submittedAt: string;
   totalScore: number;
   maxScore: number;
   percentageScore: number;
   isPassed: boolean;
+  attemptsUsed: number;
+  maxAttempts: number;
+  canRetake: boolean;
+  certificateIssued?: boolean;
   questionResults: QuestionResult[];
 }
 
@@ -77,7 +88,10 @@ interface QuestionResult {
 }
 
 export default function StudentQuizComponent() {
-  const { quizId, courseId } = useRoute().params;
+  const { quizId } = useParams<{ quizId: string }>();
+  const [searchParams] = useSearchParams();
+  const courseId = searchParams.get('courseId');
+
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Map<number, number | string>>(new Map());
@@ -89,10 +103,10 @@ export default function StudentQuizComponent() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (quizId && courseId) {
+    if (quizId) {
       fetchQuiz(parseInt(quizId));
     }
-  }, [quizId, courseId]);
+  }, [quizId]);
 
   // Timer effect
   useEffect(() => {
@@ -118,17 +132,10 @@ export default function StudentQuizComponent() {
   const fetchQuiz = async (id: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/v1/quizzes/${id}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setQuiz(data);
-      } else {
-        throw new Error("Failed to load quiz");
-      }
+      const response = await apiClient.get(`quizzes/${id}`);
+      console.log("Quiz data:", response.data);
+      console.log("Questions:", response.data.questions);
+      setQuiz(response.data);
     } catch (error) {
       console.error("Error fetching quiz:", error);
       toast({
@@ -164,29 +171,25 @@ export default function StudentQuizComponent() {
       const answersList = Array.from(answers.entries()).map(([qId, answer]) => ({
         questionId: qId,
         selectedOptionId: typeof answer === "number" ? answer : null,
-        answerText: typeof answer === "string" ? answer : null,
+        textAnswer: typeof answer === "string" ? answer : null,
       }));
 
-      const response = await fetch(`/api/v1/quizzes/${quiz.quizId}/submit`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          quizId: quiz.quizId,
-          courseId: parseInt(courseId),
-          answers: answersList,
-        }),
+      const response = await apiClient.post(`quizzes/${quiz.quizId}/submit`, {
+        quizId: quiz.quizId,
+        answers: answersList,
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      const data = response.data;
+      if (response.status === 200) {
         setQuizResult(data);
         if (data.isPassed) {
+          const message = data.certificateIssued
+            ? `You passed with ${data.percentageScore.toFixed(1)}% and earned a certificate!`
+            : `You passed with ${data.percentageScore.toFixed(1)}%! Certificate will be issued shortly.`;
+
           toast({
             title: "Congratulations!",
-            description: `You passed with ${data.percentageScore.toFixed(1)}%`,
+            description: message,
           });
         } else {
           toast({
@@ -281,11 +284,10 @@ export default function StudentQuizComponent() {
     return (
       <div className="max-w-2xl mx-auto my-8 space-y-6">
         {/* Result Summary */}
-        <div className={`border-2 rounded-lg p-8 text-center space-y-4 ${
-          quizResult.isPassed
-            ? "bg-green-50 border-green-200"
-            : "bg-red-50 border-red-200"
-        }`}>
+        <div className={`border-2 rounded-lg p-8 text-center space-y-4 ${quizResult.isPassed
+          ? "bg-green-50 border-green-200"
+          : "bg-red-50 border-red-200"
+          }`}>
           <div className="flex justify-center">
             {quizResult.isPassed ? (
               <CheckCircle2 className="w-16 h-16 text-green-600" />
@@ -294,9 +296,8 @@ export default function StudentQuizComponent() {
             )}
           </div>
 
-          <h2 className={`text-3xl font-bold ${
-            quizResult.isPassed ? "text-green-900" : "text-red-900"
-          }`}>
+          <h2 className={`text-3xl font-bold ${quizResult.isPassed ? "text-green-900" : "text-red-900"
+            }`}>
             {quizResult.isPassed ? "Quiz Passed!" : "Quiz Failed"}
           </h2>
 
@@ -304,13 +305,16 @@ export default function StudentQuizComponent() {
             {quizResult.percentageScore.toFixed(1)}%
           </div>
 
-          <p className={`text-sm ${
-            quizResult.isPassed ? "text-green-700" : "text-red-700"
-          }`}>
+          <p className={`text-sm ${quizResult.isPassed ? "text-green-700" : "text-red-700"
+            }`}>
             {quizResult.totalScore} out of {quizResult.maxScore} points
           </p>
 
-          {!quizResult.isPassed && quiz.allowRetake && (
+          <p className="text-sm text-muted-foreground">
+            Attempt {quizResult.attemptsUsed} of {quizResult.maxAttempts}
+          </p>
+
+          {!quizResult.isPassed && quizResult.canRetake && (
             <button
               onClick={() => {
                 setAnswers(new Map());
@@ -417,25 +421,31 @@ export default function StudentQuizComponent() {
       <div className="border rounded-lg p-6 space-y-4">
         <h3 className="text-xl font-bold">{currentQuestion.questionText}</h3>
 
-        {currentQuestion.questionType === "MultipleChoice" || 
-         currentQuestion.questionType === "SingleSelect" ? (
-          <div className="space-y-3">
-            {currentQuestion.options.map((option) => (
-              <label
-                key={option.optionId}
-                className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted cursor-pointer transition-colors"
-              >
-                <input
-                  type="radio"
-                  name={`question-${currentQuestion.questionId}`}
-                  checked={currentAnswer === option.optionId}
-                  onChange={() => handleAnswerSelect(option.optionId)}
-                  className="w-4 h-4"
-                />
-                <span>{option.optionText}</span>
-              </label>
-            ))}
-          </div>
+        {currentQuestion.questionType === "MultipleChoice" ? (
+          currentQuestion.options && currentQuestion.options.length > 0 ? (
+            <div className="space-y-3">
+              {currentQuestion.options.map((option) => (
+                <label
+                  key={option.optionId}
+                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                >
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion.questionId}`}
+                    checked={currentAnswer === option.optionId}
+                    onChange={() => handleAnswerSelect(option.optionId)}
+                    className="w-4 h-4"
+                  />
+                  <span>{option.optionText}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-700">No options available for this question.</p>
+              <p className="text-sm text-yellow-600 mt-1">Question Type: {currentQuestion.questionType}</p>
+            </div>
+          )
         ) : (
           <textarea
             value={currentAnswer || ""}
@@ -499,16 +509,3 @@ export default function StudentQuizComponent() {
   );
 }
 
-function useRoute() {
-  const [params, setParams] = useState({ quizId: "", courseId: "" });
-
-  useEffect(() => {
-    const path = window.location.pathname;
-    const match = path.match(/\/courses\/(\d+)\/quizzes\/(\d+)/);
-    if (match) {
-      setParams({ courseId: match[1], quizId: match[2] });
-    }
-  }, []);
-
-  return { params };
-}

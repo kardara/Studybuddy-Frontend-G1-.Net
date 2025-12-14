@@ -1,7 +1,9 @@
 import axios from 'axios';
 
-// Backend API base URL - adjust if your backend runs on a different port
-export const API_BASE_URL = 'http://localhost:5103';
+// Backend API base URL - update this to your MonsterASP.NET backend URL
+// For local development: 'http://localhost:5103'
+// For production: 'https://your-app-name.monsterasp.net'
+export const API_BASE_URL = 'http://localhost:5103'; // TODO: Replace with your actual MonsterASP.NET URL
 export const API_VERSION = '/api/v1';
 
 // Create axios instance with default config

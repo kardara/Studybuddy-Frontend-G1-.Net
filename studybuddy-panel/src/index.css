@@ -4,6 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===============================
+   BASE THEME VARIABLES
+================================ */
 @layer base {
   :root {
     --background: 210 20% 98%;
@@ -40,7 +43,7 @@
     --input: 214 32% 91%;
     --ring: 217 91% 60%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
@@ -58,9 +61,7 @@
     --chart-4: 280 65% 60%;
     --chart-5: 0 84% 60%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
@@ -68,52 +69,86 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: "Inter", sans-serif;
+    line-height: 1.6;
   }
 }
 
+/* ===============================
+   COMPONENTS
+================================ */
 @layer components {
+
+  /* ---- Layout ---- */
+  .page-header {
+    @apply flex flex-col gap-3
+           md:flex-row md:items-center md:justify-between
+           mb-8;
+  }
+
+  .page-title {
+    @apply text-2xl md:text-3xl font-semibold;
+  }
+
+  .section-title {
+    @apply text-lg font-semibold mb-4;
+  }
+
+  /* ---- Cards ---- */
   .dashboard-card {
-    @apply bg-card rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow duration-200;
+    @apply bg-card rounded-xl border border-border
+           shadow-sm hover:shadow-lg
+           transition-all duration-300;
   }
 
   .stat-card {
-    @apply dashboard-card p-6;
+    @apply dashboard-card p-6 flex flex-col gap-2;
   }
 
+  /* ---- Sidebar ---- */
   .sidebar-item {
-    @apply flex items-center gap-3 px-4 py-3 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground rounded-lg transition-all duration-200 cursor-pointer;
+    @apply flex items-center gap-3 px-4 py-3
+           text-sidebar-foreground/80
+           hover:bg-sidebar-accent hover:text-sidebar-foreground
+           rounded-lg transition-all duration-200;
   }
 
   .sidebar-item-active {
-    @apply bg-sidebar-primary text-sidebar-primary-foreground;
+    @apply bg-sidebar-primary text-sidebar-primary-foreground shadow-sm;
   }
 
+  /* ---- Tables ---- */
   .data-table {
     @apply w-full border-collapse;
   }
 
   .data-table th {
-    @apply text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 bg-muted/50 border-b;
+    @apply text-left text-xs font-semibold uppercase tracking-wider
+           text-muted-foreground px-4 py-3 bg-muted/50 border-b;
   }
 
   .data-table td {
     @apply px-4 py-4 border-b border-border;
   }
 
-  .data-table tr:hover {
-    @apply bg-muted/30;
+  .data-table tr {
+    @apply transition-colors hover:bg-muted/30;
   }
 
+  /* ---- Progress ---- */
   .progress-bar {
-    @apply h-2 bg-muted rounded-full overflow-hidden;
+    @apply h-2.5 bg-muted rounded-full overflow-hidden;
   }
 
   .progress-bar-fill {
-    @apply h-full bg-primary rounded-full transition-all duration-500;
+    @apply h-full bg-primary rounded-full
+           transition-all duration-700 ease-out;
   }
 
+  /* ---- Badges ---- */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1
+           px-2.5 py-0.5 rounded-full
+           text-xs font-medium whitespace-nowrap;
   }
 
   .badge-success {
@@ -132,70 +167,91 @@
     @apply bg-muted text-muted-foreground;
   }
 
+  /* ---- Inputs ---- */
   .input-field {
-    @apply w-full px-4 py-2.5 rounded-lg border border-input bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200;
+    @apply w-full px-4 py-2.5 rounded-lg border border-input
+           bg-card placeholder:text-muted-foreground
+           focus:outline-none focus:ring-2 focus:ring-ring
+           transition-all duration-200;
   }
 
+  /* ---- Buttons ---- */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors duration-200 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 bg-primary text-primary-foreground
+           font-medium rounded-lg hover:bg-primary/90
+           focus:ring-2 focus:ring-ring focus:ring-offset-2
+           transition-colors;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 bg-secondary text-secondary-foreground
+           font-medium rounded-lg hover:bg-secondary/80
+           focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-border bg-transparent text-foreground font-medium rounded-lg hover:bg-muted transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 border border-border bg-transparent
+           rounded-lg hover:bg-muted
+           focus:ring-2 focus:ring-ring focus:ring-offset-2;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-transparent text-foreground font-medium rounded-lg hover:bg-muted transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 hover:bg-muted rounded-lg;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-destructive text-destructive-foreground font-medium rounded-lg hover:bg-destructive/90 transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 bg-destructive text-destructive-foreground
+           rounded-lg hover:bg-destructive/90;
   }
 
   .btn-success {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-success-foreground font-medium rounded-lg hover:bg-success/90 transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2
+           px-4 py-2.5 bg-success text-success-foreground
+           rounded-lg hover:bg-success/90;
   }
 
-  .page-header {
-    @apply flex items-center justify-between mb-6;
-  }
-
-  .page-title {
-    @apply text-2xl font-semibold text-foreground;
-  }
-
-  .section-title {
-    @apply text-lg font-semibold text-foreground mb-4;
-  }
-
+  /* ---- Chat ---- */
   .chat-bubble-user {
-    @apply bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-3 max-w-[80%] ml-auto;
+    @apply bg-primary text-primary-foreground
+           rounded-2xl rounded-br-md
+           px-4 py-3 max-w-[75%] ml-auto shadow-sm;
   }
 
   .chat-bubble-ai {
-    @apply bg-muted text-foreground rounded-2xl rounded-bl-md px-4 py-3 max-w-[80%];
+    @apply bg-muted text-foreground
+           rounded-2xl rounded-bl-md
+           px-4 py-3 max-w-[75%] shadow-sm;
   }
 
+  /* ---- Dropdowns ---- */
   .nav-dropdown {
-    @apply absolute right-0 top-full mt-2 w-48 bg-card rounded-lg border border-border shadow-lg py-2 z-50;
+    @apply absolute right-0 top-full mt-2 w-48
+           bg-card rounded-lg border border-border
+           shadow-lg py-2 z-50;
   }
 
   .nav-dropdown-item {
-    @apply px-4 py-2 text-sm text-foreground hover:bg-muted cursor-pointer transition-colors;
+    @apply px-4 py-2 text-sm hover:bg-muted transition-colors;
   }
 
+  /* ---- Modal ---- */
   .modal-overlay {
-    @apply fixed inset-0 bg-foreground/50 z-40 flex items-center justify-center;
+    @apply fixed inset-0 bg-foreground/50 z-40
+           flex items-center justify-center;
   }
 
   .modal-content {
-    @apply bg-card rounded-xl border border-border shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-auto;
+    @apply bg-card rounded-2xl border border-border
+           shadow-2xl max-w-lg w-full mx-4
+           max-h-[90vh] overflow-auto;
   }
 
+  /* ---- Tabs ---- */
   .tab-active {
     @apply text-primary border-b-2 border-primary;
   }
@@ -205,14 +261,13 @@
   }
 }
 
+/* ===============================
+   UTILITIES
+================================ */
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-transparent;
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {

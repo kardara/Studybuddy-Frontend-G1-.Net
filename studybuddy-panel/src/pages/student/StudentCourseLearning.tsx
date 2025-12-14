@@ -9,6 +9,7 @@ import {
     BookOpen,
     Clock,
     Award,
+    Play,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -44,6 +45,31 @@ interface StudentProgress {
     completedAt?: string;
 }
 
+// Utility function to convert video URLs to embed URLs
+const getEmbedUrl = (url: string): string => {
+    if (!url) return "";
+
+    // YouTube
+    const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    if (youtubeMatch) {
+        return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+    }
+
+    // Vimeo
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+
+    // If it's already an embed URL, return as is
+    if (url.includes("embed") || url.includes("player")) {
+        return url;
+    }
+
+    // For direct video files or other URLs, return as is
+    return url;
+};
+
 export default function StudentCourseLearning() {
     const { courseId } = useRoute().params;
     const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -51,6 +77,8 @@ export default function StudentCourseLearning() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
+    const [videoLoading, setVideoLoading] = useState(false);
+    const [videoError, setVideoError] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -65,6 +93,12 @@ export default function StudentCourseLearning() {
             setCurrentLessonId(firstLesson.lessonId);
         }
     }, [course]);
+
+    // Reset video states when lesson changes
+    useEffect(() => {
+        setVideoLoading(true);
+        setVideoError(false);
+    }, [currentLessonId]);
 
     const fetchCourse = async (id: number) => {
         try {
@@ -266,8 +300,8 @@ export default function StudentCourseLearning() {
                                         key={lesson.lessonId}
                                         onClick={() => setCurrentLessonId(lesson.lessonId)}
                                         className={`w-full text-left px-3 py-2 rounded transition-colors text-sm flex items-center gap-2 ${currentLessonId === lesson.lessonId
-                                                ? "bg-primary text-white"
-                                                : "hover:bg-muted"
+                                            ? "bg-primary text-white"
+                                            : "hover:bg-muted"
                                             }`}
                                     >
                                         {completedLessons.has(lesson.lessonId) ? (
@@ -310,13 +344,58 @@ export default function StudentCourseLearning() {
                         {/* Lesson Content */}
                         <div className="border rounded-lg p-6 space-y-4">
                             {currentLesson.contentType === "video" && currentLesson.videoUrl && (
-                                <div className="aspect-video bg-muted rounded-lg overflow-hidden">
-                                    <iframe
-                                        src={currentLesson.videoUrl}
-                                        title={currentLesson.title}
-                                        className="w-full h-full"
-                                        allowFullScreen
-                                    />
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Play className="w-4 h-4" />
+                                        <span>Video Lesson</span>
+                                    </div>
+                                    <div className="aspect-video bg-muted rounded-lg overflow-hidden relative">
+                                        {videoLoading && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                            </div>
+                                        )}
+                                        {!videoError ? (
+                                            <iframe
+                                                src={getEmbedUrl(currentLesson.videoUrl)}
+                                                title={currentLesson.title}
+                                                className="w-full h-full"
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                                frameBorder="0"
+                                                onLoad={() => setVideoLoading(false)}
+                                                onError={() => {
+                                                    console.error("Video failed to load:", currentLesson.videoUrl);
+                                                    setVideoLoading(false);
+                                                    setVideoError(true);
+                                                }}
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground">
+                                                <div className="text-center p-4">
+                                                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                                    <h3 className="font-medium mb-2">Video Unavailable</h3>
+                                                    <p className="text-sm mb-4">
+                                                        Unable to load the video. This might be due to:
+                                                    </p>
+                                                    <ul className="text-xs text-left space-y-1 mb-4">
+                                                        <li>• Invalid video URL</li>
+                                                        <li>• Video platform restrictions</li>
+                                                        <li>• Network connectivity issues</li>
+                                                    </ul>
+                                                    <button
+                                                        onClick={() => {
+                                                            setVideoError(false);
+                                                            setVideoLoading(true);
+                                                        }}
+                                                        className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm"
+                                                    >
+                                                        Try Again
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
 
@@ -339,8 +418,8 @@ export default function StudentCourseLearning() {
                                     submitting || completedLessons.has(currentLesson.lessonId)
                                 }
                                 className={`w-full px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${completedLessons.has(currentLesson.lessonId)
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-primary text-white hover:bg-primary/90 disabled:bg-primary/50"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-primary text-white hover:bg-primary/90 disabled:bg-primary/50"
                                     }`}
                             >
                                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}

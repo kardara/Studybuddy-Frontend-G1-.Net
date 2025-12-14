@@ -45,6 +45,11 @@ export const quizzesService = {
     return response.data;
   },
 
+  // Alias for getQuiz
+  async getQuizById(id: number): Promise<QuizDto> {
+    return this.getQuiz(id);
+  },
+
   // Get all quizzes for admin
   async getAllQuizzes(): Promise<QuizListItem[]> {
     const response = await apiClient.get<QuizListItem[]>("/quizzes/admin/all");
@@ -93,8 +98,13 @@ export const quizzesService = {
 
   // Get student quiz attempts
   async getStudentQuizAttempts(): Promise<StudentQuizAttempt[]> {
+    // Get current user ID from localStorage
+    const userStr = localStorage.getItem('user');
+    if (!userStr) throw new Error('User not authenticated');
+
+    const user = JSON.parse(userStr);
     const response = await apiClient.get<StudentQuizAttempt[]>(
-      `/quizzes/student/attempts`
+      `/quizzes/student/${user.userId}`
     );
     return response.data;
   },

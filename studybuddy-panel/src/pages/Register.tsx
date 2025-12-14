@@ -9,7 +9,6 @@ export default function Register() {
     const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [role, setRole] = useState('Student');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -21,27 +20,23 @@ export default function Register() {
         e.preventDefault();
         setError('');
 
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters long');
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters long');
             return;
         }
 
         setIsLoading(true);
 
         try {
-            await register({ email, password, firstName, lastName, role });
+            await register({ email, password, firstName, lastName });
 
             toast({
                 title: "Registration successful",
                 description: "Welcome to StudyBuddy!",
             });
 
-            // Redirect based on role
-            if (role === 'Admin') {
-                navigate('/admin');
-            } else {
-                navigate('/student');
-            }
+            // All new users are Students by default
+            navigate('/student');
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
             setError(errorMessage);
@@ -148,28 +143,12 @@ export default function Register() {
                                     placeholder="••••••••"
                                     required
                                     disabled={isLoading}
-                                    minLength={6}
+                                    minLength={8}
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                                Minimum 6 characters
+                                Minimum 8 characters
                             </p>
-                        </div>
-
-                        <div>
-                            <label htmlFor="role" className="block text-sm font-medium mb-2">
-                                I am a
-                            </label>
-                            <select
-                                id="role"
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                className="input-field"
-                                disabled={isLoading}
-                            >
-                                <option value="Student">Student</option>
-                                <option value="Admin">Admin</option>
-                            </select>
                         </div>
 
                         <button
