@@ -30,6 +30,8 @@ import {
   CourseListDto,
   CreateQuizRequest,
   UpdateQuizRequest,
+  QuestionDto,
+  QuestionOptionDto,
 } from "@/lib/types";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -147,11 +149,11 @@ export default function AdminQuizzes() {
         timeLimit: fullQuiz.timeLimit || undefined,
         maxAttempts: fullQuiz.maxAttempts || undefined,
         isActive: fullQuiz.isActive,
-        questions: fullQuiz.questions?.map((q: any) => ({
+        questions: fullQuiz.questions?.map((q: QuestionDto) => ({
           questionText: q.questionText,
-          questionType: q.questionType,
+          questionType: "MultipleChoice",
           points: q.points || 1,
-          options: q.options?.map((opt: any) => ({
+          options: q.options?.map((opt: QuestionOptionDto) => ({
             optionText: opt.optionText,
             isCorrect: opt.isCorrect,
           })) || [],
@@ -273,11 +275,11 @@ export default function AdminQuizzes() {
       setShowModal(false);
       resetForm();
       await loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to save quiz",
+        description: (error as Error).message || "Failed to save quiz",
       });
     } finally {
       setSubmitting(false);

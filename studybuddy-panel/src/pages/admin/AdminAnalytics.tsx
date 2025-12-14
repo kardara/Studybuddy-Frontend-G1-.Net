@@ -14,13 +14,55 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { TrendingUp, TrendingDown, Users, BookOpen, Award, MessageSquare } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, BookOpen, Award, MessageSquare, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { analyticsService, DashboardAnalytics } from "@/services/api/analytics.service";
 
 export default function AdminAnalytics() {
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const exportAnalyticsData = () => {
+    if (!analytics) return;
+
+    // Prepare CSV data
+    const csvData = [
+      // Header
+      ['Metric', 'Value', 'Change'],
+      ['Total Students', analytics.totalStudents, '+12.5%'],
+      ['Total Enrollments', analytics.totalEnrollments, '+8.2%'],
+      ['Average Completion Rate', `${analytics.averageCompletionRate}%`, ''],
+      ['Total Courses', analytics.totalCourses, ''],
+      ['Total Certificates Issued', analytics.totalCertificatesIssued, ''],
+      ['Total Chat Sessions', analytics.totalChatSessions, ''],
+      ['', '', ''], // Empty row
+      ['Daily Metrics', '', ''],
+      ['Date', 'New Registrations', 'New Enrollments', 'Quizzes Completed', 'Certificates Issued'],
+      ...analytics.dailyMetrics.map(metric => [
+        new Date(metric.date).toLocaleDateString(),
+        metric.newRegistrations,
+        metric.newEnrollments,
+        metric.quizzesCompleted,
+        metric.certificatesIssued
+      ])
+    ];
+
+    // Convert to CSV string
+    const csvContent = csvData.map(row =>
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `analytics-report-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -86,7 +128,10 @@ export default function AdminAnalytics() {
             <option>Last 90 days</option>
             <option>This Year</option>
           </select>
-          <button className="btn-primary">Export Report</button>
+          <button onClick={exportAnalyticsData} className="btn-primary flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
         </div>
       </div>
 

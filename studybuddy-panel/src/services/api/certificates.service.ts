@@ -23,4 +23,19 @@ export const certificatesService = {
     );
     return response.data;
   },
+
+  async downloadCertificate(certificateId: number): Promise<Blob> {
+    const response = await apiClient.get(
+      `/certificates/download/${certificateId}`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  async getAllCertificates(): Promise<CertificateDto[]> {
+    const response = await apiClient.get<CertificateDto[]>(
+      "/certificates/admin/all"
+    );
+    return response.data;
+  },
 };

@@ -11,7 +11,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Shield,
   UserCheck,
   UserX,
   Check,
@@ -20,6 +19,7 @@ import {
   AlertCircle,
   CheckCircle,
   ChevronDown,
+  Shield,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api.config";
@@ -42,13 +42,6 @@ interface StudentUser {
   certificatesEarned?: number;
 }
 
-interface Permission {
-  permissionId: number;
-  permissionName: string;
-  description?: string;
-  isActive?: boolean;
-}
-
 interface BlockModalData {
   show: boolean;
   studentId?: number;
@@ -56,10 +49,11 @@ interface BlockModalData {
   currentReason?: string;
 }
 
-interface PermissionModalData {
+interface RoleModalData {
   show: boolean;
-  studentId?: number;
-  studentName?: string;
+  userId?: number;
+  userName?: string;
+  currentRole?: string;
 }
 
 export default function AdminStudents() {
@@ -72,22 +66,17 @@ export default function AdminStudents() {
   );
   const [expandedStudent, setExpandedStudent] = useState<number | null>(null);
   const [blockModal, setBlockModal] = useState<BlockModalData>({ show: false });
-  const [permissionModal, setPermissionModal] = useState<PermissionModalData>({
-    show: false,
-  });
+  const [roleModal, setRoleModal] = useState<RoleModalData>({ show: false });
   const [blockReason, setBlockReason] = useState("");
-  const [availablePermissions, setAvailablePermissions] = useState<Permission[]>(
-    []
-  );
-  const [studentPermissions, setStudentPermissions] = useState<Permission[]>([]);
-  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+  const [selectedRole, setSelectedRole] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+
+  const availableRoles = ["Student", "Admin"];
 
   // Load students on mount
   useEffect(() => {
     fetchStudents();
-    fetchAvailablePermissions();
   }, []);
 
   // Filter students when search or filter changes
@@ -101,6 +90,8 @@ export default function AdminStudents() {
       const response = await apiClient.get("admin/users?role=Student&pageSize=100");
       if (response.data.users) {
         setStudents(response.data.users);
+      } else if (response.data.Users) {
+        setStudents(response.data.Users);
       } else {
         throw new Error("Failed to fetch students");
       }
@@ -116,24 +107,6 @@ export default function AdminStudents() {
     }
   };
 
-  const fetchAvailablePermissions = async () => {
-    try {
-      const response = await apiClient.get("permissions/list");
-      setAvailablePermissions(response.data);
-    } catch (error) {
-      console.error("Error fetching permissions:", error);
-    }
-  };
-
-  const fetchStudentPermissions = async (studentId: number) => {
-    try {
-      const response = await apiClient.get(`admin/users/${studentId}/permissions`);
-      setStudentPermissions(response.data.permissions || []);
-      setSelectedPermissions(response.data.permissions?.map((p: Permission) => p.permissionId) || []);
-    } catch (error) {
-      console.error("Error fetching student permissions:", error);
-    }
-  };
 
   const applyFilters = () => {
     const filtered = students.filter((student) => {
@@ -245,57 +218,58 @@ export default function AdminStudents() {
     }
   };
 
-  const handleOpenPermissionsModal = async (student: StudentUser) => {
-    await fetchStudentPermissions(student.userId);
-    setPermissionModal({
+  const handleOpenRoleModal = (user: StudentUser) => {
+    setSelectedRole(user.role);
+    setRoleModal({
       show: true,
-      studentId: student.userId,
-      studentName: `${student.firstName} ${student.lastName}`,
+      userId: user.userId,
+      userName: `${user.firstName} ${user.lastName}`,
+      currentRole: user.role,
     });
   };
 
-  const handleSavePermissions = async () => {
-    if (!permissionModal.studentId) return;
-
-    setSubmitting(true);
-    try {
-      // Get current permissions
-      const currentPermIds = studentPermissions.map((p) => p.permissionId);
-
-      // Find permissions to add and remove
-      const toAdd = selectedPermissions.filter((id) => !currentPermIds.includes(id));
-      const toRemove = currentPermIds.filter((id) => !selectedPermissions.includes(id));
-
-      // Grant new permissions
-      for (const permId of toAdd) {
-        await apiClient.post("permissions/grant", {
-          userId: permissionModal.studentId,
-          permissionId: permId,
-        });
-      }
-
-      // Revoke removed permissions
-      for (const permId of toRemove) {
-        await apiClient.delete(`permissions/user/${permissionModal.studentId}/permission/${permId}`);
-      }
-
-      toast({
-        title: "Success",
-        description: "Permissions updated successfully",
-      });
-      setPermissionModal({ show: false });
-      await fetchStudents();
-    } catch (error) {
-      console.error("Error updating permissions:", error);
+  const handleChangeRole = async () => {
+    if (!roleModal.userId || !selectedRole.trim()) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update permissions",
+        description: "Please select a role",
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await apiClient.put(`admin/users/${roleModal.userId}`, {
+        firstName: "", // These will be ignored since we're only updating role
+        lastName: "",
+        role: selectedRole,
+        isActive: true,
+      });
+
+      setStudents(
+        students.map((s) =>
+          s.userId === roleModal.userId ? { ...s, role: selectedRole } : s
+        )
+      );
+      setRoleModal({ show: false });
+      setSelectedRole("");
+      toast({
+        title: "Success",
+        description: "User role has been updated",
+      });
+    } catch (error) {
+      console.error("Error changing role:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to change user role",
       });
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -368,6 +342,7 @@ export default function AdminStudents() {
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-medium">Student</th>
                 <th className="px-6 py-3 text-left text-sm font-medium">Email</th>
+                <th className="px-6 py-3 text-left text-sm font-medium">Role</th>
                 <th className="px-6 py-3 text-left text-sm font-medium">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-medium">Enrollments</th>
                 <th className="px-6 py-3 text-left text-sm font-medium">Certificates</th>
@@ -418,11 +393,21 @@ export default function AdminStudents() {
                         <td className="px-6 py-4 text-sm">{student.email}</td>
                         <td className="px-6 py-4">
                           <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${student.role === "Admin"
+                              ? "bg-purple-100 text-purple-700"
+                              : "bg-blue-100 text-blue-700"
+                              }`}
+                          >
+                            {student.role}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${student.isBlocked
-                                ? "bg-red-100 text-red-700"
-                                : student.isActive
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
+                              ? "bg-red-100 text-red-700"
+                              : student.isActive
+                                ? "bg-green-100 text-green-700"
+                                : "bg-yellow-100 text-yellow-700"
                               }`}
                           >
                             {student.isBlocked
@@ -465,9 +450,9 @@ export default function AdminStudents() {
                               </button>
                             )}
                             <button
-                              onClick={() => handleOpenPermissionsModal(student)}
+                              onClick={() => handleOpenRoleModal(student)}
                               className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
-                              title="Manage permissions"
+                              title="Change role"
                             >
                               <Shield className="w-4 h-4" />
                             </button>
@@ -568,14 +553,14 @@ export default function AdminStudents() {
         </div>
       )}
 
-      {/* Permissions Modal */}
-      {permissionModal.show && (
+      {/* Role Change Modal */}
+      {roleModal.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Manage Permissions</h2>
+              <h2 className="text-xl font-bold">Change User Role</h2>
               <button
-                onClick={() => setPermissionModal({ show: false })}
+                onClick={() => setRoleModal({ show: false })}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
@@ -583,54 +568,43 @@ export default function AdminStudents() {
             </div>
 
             <p className="text-sm text-muted-foreground mb-4">
-              Configure permissions for {permissionModal.studentName}
+              Change role for {roleModal.userName}
             </p>
 
-            <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto">
-              {availablePermissions.map((perm) => (
-                <label key={perm.permissionId} className="flex items-start gap-3 p-2 hover:bg-muted rounded-lg">
-                  <input
-                    type="checkbox"
-                    checked={selectedPermissions.includes(perm.permissionId)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedPermissions([...selectedPermissions, perm.permissionId]);
-                      } else {
-                        setSelectedPermissions(
-                          selectedPermissions.filter((id) => id !== perm.permissionId)
-                        );
-                      }
-                    }}
-                    className="mt-1"
-                  />
-                  <div>
-                    <div className="font-medium text-sm">{perm.permissionName}</div>
-                    {perm.description && (
-                      <div className="text-xs text-muted-foreground">{perm.description}</div>
-                    )}
-                  </div>
-                </label>
-              ))}
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-2">Select Role</label>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {availableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => setPermissionModal({ show: false })}
+                onClick={() => setRoleModal({ show: false })}
                 className="flex-1 px-4 py-2 border rounded-lg hover:bg-muted transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleSavePermissions}
-                disabled={submitting}
+                onClick={handleChangeRole}
+                disabled={submitting || !selectedRole.trim()}
                 className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:bg-primary/50"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Save"}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Change Role"}
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

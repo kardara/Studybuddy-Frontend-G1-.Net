@@ -50,7 +50,7 @@ const getEmbedUrl = (url: string): string => {
     if (!url) return "";
 
     // YouTube
-    const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    const youtubeMatch = url.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\\s]{11})/);
     if (youtubeMatch) {
         return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
     }

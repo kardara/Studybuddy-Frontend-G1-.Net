@@ -3,8 +3,11 @@ import { Award, Download, Eye, Loader2 } from "lucide-react";
 import { CertificateCard } from "@/components/dashboard/CertificateCard";
 import { certificatesService } from "@/services/api/certificates.service";
 import { progressService } from "@/services/api/progress.service";
+import { useToast } from "@/hooks/use-toast";
 
 export default function StudentCertificates() {
+  const { toast } = useToast();
+
   const { data: certificates, isLoading } = useQuery({
     queryKey: ['my-certificates'],
     queryFn: () => certificatesService.getMyCertificates(),
@@ -18,6 +21,32 @@ export default function StudentCertificates() {
   const inProgressCourses = progressData?.filter(
     (p) => p.progressPercentage > 0 && p.progressPercentage < 100
   ).length || 0;
+
+  const handleDownloadCertificate = async (certificateId: number) => {
+    try {
+      const blob = await certificatesService.downloadCertificate(certificateId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Certificate_${certificateId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: "Your certificate PDF is being downloaded.",
+      });
+    } catch (error) {
+      console.error("Error downloading certificate:", error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Failed to download certificate. Please try again.",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -91,7 +120,7 @@ export default function StudentCertificates() {
             <CertificateCard
               key={cert.certificateId}
               courseName={cert.courseTitle}
-              completedDate={new Date(cert.issueDate).toLocaleDateString('en-US', {
+              completedDate={new Date(cert.issuedAt).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'
@@ -99,15 +128,10 @@ export default function StudentCertificates() {
               score={90} // Placeholder as backend doesn't provide quiz scores with certificates
               certificateId={cert.certificateNumber}
               onView={() => {
-                if (cert.certificateUrl) {
-                  window.open(cert.certificateUrl, '_blank');
-                }
+                // For now, download the PDF to view it
+                handleDownloadCertificate(cert.certificateId);
               }}
-              onDownload={() => {
-                if (cert.certificateUrl) {
-                  window.open(cert.certificateUrl, '_blank');
-                }
-              }}
+              onDownload={() => handleDownloadCertificate(cert.certificateId)}
             />
           ))}
         </div>

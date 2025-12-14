@@ -25,10 +25,9 @@ import { useToast } from "@/hooks/use-toast";
 import { CourseListDto } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
-type TabType = "my-courses" | "browse";
 
 export default function StudentCourses() {
-  const [activeTab, setActiveTab] = useState<TabType>("my-courses");
+  // No longer needed - removed tabs
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterLevel, setFilterLevel] = useState("all");
@@ -385,126 +384,13 @@ export default function StudentCourses() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Courses</h1>
+          <h1 className="page-title">My Learning</h1>
           <p className="text-muted-foreground mt-1">
-            {activeTab === "my-courses"
-              ? "Track your enrolled courses and progress"
-              : "Discover and enroll in new courses"}
+            Continue your courses and discover new learning opportunities
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={`p-2 rounded-lg transition-colors ${viewMode === "grid"
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-muted text-muted-foreground"
-              }`}
-          >
-            <Grid3X3 className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={`p-2 rounded-lg transition-colors ${viewMode === "list"
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-muted text-muted-foreground"
-              }`}
-          >
-            <List className="w-4 h-4" />
-          </button>
-        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-1 bg-muted p-1 rounded-lg mb-6 w-fit">
-        <button
-          onClick={() => setActiveTab("my-courses")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "my-courses"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-            }`}
-        >
-          My Courses ({enrollments?.length || 0})
-        </button>
-        <button
-          onClick={() => setActiveTab("browse")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === "browse"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-            }`}
-        >
-          Browse Courses
-        </button>
-      </div>
-
-      {/* Search & Filter */}
-      <div className="dashboard-card p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab === "my-courses" ? "your courses" : "available courses"}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="input-field w-auto"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-            {activeTab === "browse" && (
-              <select
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value)}
-                className="input-field w-auto"
-              >
-                <option value="all">All Levels</option>
-                {levels.map((level) => (
-                  <option key={level} value={level}>
-                    {level}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button className="btn-outline">
-              <Filter className="w-4 h-4" />
-              More Filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats (only for My Courses tab) */}
-      {activeTab === "my-courses" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="stat-card">
-            <p className="text-sm text-muted-foreground">Total Enrolled</p>
-            <p className="text-3xl font-semibold mt-1">{enrollments?.length || 0}</p>
-          </div>
-          <div className="stat-card">
-            <p className="text-sm text-muted-foreground">In Progress</p>
-            <p className="text-3xl font-semibold mt-1">
-              {progressData?.filter((p) => p.progressPercentage > 0 && p.progressPercentage < 100).length || 0}
-            </p>
-          </div>
-          <div className="stat-card">
-            <p className="text-sm text-muted-foreground">Completed</p>
-            <p className="text-3xl font-semibold mt-1">
-              {progressData?.filter((p) => p.progressPercentage === 100).length || 0}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Content */}
       {isLoading ? (
@@ -513,101 +399,175 @@ export default function StudentCourses() {
         </div>
       ) : (
         <>
-          {/* My Courses Tab */}
-          {activeTab === "my-courses" && (
-            <>
-              {filteredEnrollments.length === 0 ? (
-                <div className="dashboard-card p-12 text-center">
-                  <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">
-                    {searchTerm || filterCategory !== "all"
-                      ? "No courses found"
-                      : "No enrolled courses yet"}
-                  </h3>
-                  <p className="text-muted-foreground mb-6">
-                    {searchTerm || filterCategory !== "all"
-                      ? "Try adjusting your search terms or filters."
-                      : "Browse our course catalog to find courses that interest you."}
-                  </p>
-                  {(!searchTerm && filterCategory === "all") && (
-                    <button
-                      onClick={() => setActiveTab("browse")}
-                      className="btn-primary"
+          {/* My Courses Section - Always visible like dashboard */}
+          {enrollments && enrollments.length > 0 && (
+            <div className="dashboard-card p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="section-title mb-0">My Courses</h2>
+                <Link
+                  to="/student/courses"
+                  className="text-sm text-primary hover:underline flex items-center gap-1"
+                >
+                  View All <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {enrollments.slice(0, 3).map((enrollment) => {
+                  const course = enrollment.course;
+                  if (!course) return null;
+                  const progress = getProgressForCourse(course.courseId);
+
+                  return (
+                    <div
+                      key={course.courseId}
+                      className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      Browse Courses
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className={viewMode === "grid"
-                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                  : "space-y-4"
-                }>
-                  {filteredEnrollments.map((enrollment) => {
-                    const course = enrollment.course;
-                    if (!course) return null;
-                    return viewMode === "grid"
-                      ? renderCourseCard(course, true)
-                      : renderCourseListItem(course, true);
-                  })}
-                </div>
-              )}
-            </>
+                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden">
+                        {course.thumbnailUrl ? (
+                          <img
+                            src={course.thumbnailUrl}
+                            alt={course.title}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <BookOpen className="w-6 h-6 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{course.title}</h4>
+                        <div className="flex items-center gap-4 mt-1">
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round(progress)}% complete
+                          </span>
+                          <ProgressBar
+                            value={progress}
+                            className="flex-1 max-w-32"
+                            size="sm"
+                            showLabel={false}
+                          />
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Link
+                          to={`/student/courses/${course.courseId}`}
+                          className="btn-primary text-sm"
+                        >
+                          {progress === 0 ? (
+                            <>
+                              <Play className="w-4 h-4" />
+                              Start
+                            </>
+                          ) : progress === 100 ? (
+                            <>
+                              <CheckCircle className="w-4 h-4" />
+                              Review
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              Continue
+                            </>
+                          )}
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
-          {/* Browse Courses Tab */}
-          {activeTab === "browse" && (
-            <>
-              {/* Featured Courses */}
-              {featuredCourses && featuredCourses.length > 0 && !searchTerm && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    Featured Courses
-                  </h2>
-                  <div className={viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-                    : "space-y-4"
-                  }>
-                    {featuredCourses.slice(0, 4).map((course) =>
-                      viewMode === "grid"
-                        ? renderCourseCard(course)
-                        : renderCourseListItem(course)
-                    )}
-                  </div>
-                </div>
-              )}
+          {/* Browse Courses Section */}
+          <div className="dashboard-card p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="section-title mb-0">Browse Courses</h2>
+            </div>
 
-              {/* Available Courses */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4">
-                  {featuredCourses && featuredCourses.length > 0 && !searchTerm ? "All Available Courses" : "Available Courses"}
-                </h2>
-                {filteredAvailableCourses.length === 0 ? (
-                  <div className="dashboard-card p-12 text-center">
-                    <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No courses found</h3>
-                    <p className="text-muted-foreground mb-6">
-                      {searchTerm || filterCategory !== "all" || filterLevel !== "all"
-                        ? "Try adjusting your search terms or filters."
-                        : "No courses are currently available for enrollment."}
-                    </p>
-                  </div>
-                ) : (
-                  <div className={viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                    : "space-y-4"
-                  }>
-                    {filteredAvailableCourses.map((course) =>
-                      viewMode === "grid"
-                        ? renderCourseCard(course)
-                        : renderCourseListItem(course)
-                    )}
-                  </div>
+            {/* Search & Filter */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search courses..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input-field pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="input-field w-auto"
+                >
+                  <option value="all">All Categories</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={filterLevel}
+                  onChange={(e) => setFilterLevel(e.target.value)}
+                  className="input-field w-auto"
+                >
+                  <option value="all">All Levels</option>
+                  {levels.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setViewMode("grid")}
+                    className={`p-2 rounded-lg transition-colors ${viewMode === "grid"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted text-muted-foreground"
+                      }`}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={`p-2 rounded-lg transition-colors ${viewMode === "list"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted text-muted-foreground"
+                      }`}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Courses Grid/List */}
+            {filteredAvailableCourses.length === 0 ? (
+              <div className="text-center py-12">
+                <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No courses found</h3>
+                <p className="text-muted-foreground">
+                  {searchTerm || filterCategory !== "all" || filterLevel !== "all"
+                    ? "Try adjusting your search terms or filters."
+                    : "No courses are currently available for enrollment."}
+                </p>
+              </div>
+            ) : (
+              <div className={viewMode === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                : "space-y-4"
+              }>
+                {filteredAvailableCourses.map((course) =>
+                  viewMode === "grid"
+                    ? renderCourseCard(course)
+                    : renderCourseListItem(course)
                 )}
               </div>
-            </>
-          )}
+            )}
+          </div>
+
         </>
       )}
     </div>

@@ -206,6 +206,7 @@ export interface ProgressResponse {
 
 // Quiz Types
 export interface QuestionOptionDto {
+  isCorrect: any;
   optionId: number;
   optionText: string;
   orderIndex: number;
@@ -285,10 +286,12 @@ export interface QuizAttemptDto {
 export interface CertificateDto {
   certificateId: number;
   certificateNumber: string;
+  studentId: number;
   studentName: string;
+  studentEmail: string;
+  courseId: number;
   courseTitle: string;
-  issueDate: string;
-  expiryDate?: string;
+  issuedAt: string;
   certificateUrl?: string;
 }
 
